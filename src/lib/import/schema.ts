@@ -1,0 +1,70 @@
+import { z } from "zod";
+
+export const examKindSchema = z.enum(["ADMITERE", "PREADMITERE"]);
+export const subjectSchema = z.enum(["MATE", "INFO"]);
+
+export const importProblemSchema = z.object({
+  number: z.string().min(1),
+  isDepartajare: z.boolean().default(false),
+  latex: z.string().min(1),
+});
+
+export const importFileSchema = z
+  .object({
+    exam: z.object({
+      year: z.number().int().min(2015).max(2026),
+      kind: examKindSchema,
+      subject: subjectSchema,
+      session: z
+        .string()
+        .min(1)
+        .nullish()
+        .transform((value) => value ?? null),
+    }),
+    problems: z.array(importProblemSchema).min(1),
+  })
+  .superRefine((file, ctx) => {
+    const seen = new Set<string>();
+    for (const problem of file.problems) {
+      if (seen.has(problem.number)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["problems"],
+          message: `Număr de problemă duplicat în fișier: "${problem.number}"`,
+        });
+      }
+      seen.add(problem.number);
+    }
+  });
+
+export type ImportFile = z.infer<typeof importFileSchema>;
+export type ImportProblem = ImportFile["problems"][number];
+
+/**
+ * Parse raw JSON text into a validated import file.
+ * JSON.parse already turns `\\mathbb` into `\mathbb` — nothing here may
+ * unescape backslashes a second time.
+ */
+export function parseImportFile(
+  jsonText: string,
+):
+  | { ok: true; file: ImportFile }
+  | { ok: false; error: string } {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(jsonText);
+  } catch (error) {
+    return {
+      ok: false,
+      error: `JSON invalid: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+  const result = importFileSchema.safeParse(raw);
+  if (!result.success) {
+    const issues = result.error.issues
+      .map((issue) => `${issue.path.join(".") || "(root)"}: ${issue.message}`)
+      .join("; ");
+    return { ok: false, error: `Validare eșuată: ${issues}` };
+  }
+  return { ok: true, file: result.data };
+}

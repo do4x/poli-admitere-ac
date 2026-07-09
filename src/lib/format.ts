@@ -26,3 +26,8 @@ export function formatDateTime(date: Date): string {
 export function formatDate(date: Date): string {
   return DATE_ONLY.format(date);
 }
+
+/** Numeric-aware ordering so "2" sorts before "10" and "M1.3" stays sane. */
+export function problemNumberCompare(a: string, b: string): number {
+  return a.localeCompare(b, "ro", { numeric: true });
+}

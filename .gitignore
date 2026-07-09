@@ -18,3 +18,4 @@ data/solutions/
 # misc
 *.log
 .DS_Store
+.playwright-mcp/

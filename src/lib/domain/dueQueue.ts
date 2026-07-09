@@ -17,10 +17,9 @@ export interface DueItem<P, S> {
  * clears the problem from the queue permanently.
  */
 export function dueSolutions<
-  S extends DueSolutionInput,
-  P extends { solutions: readonly S[] },
->(problems: readonly P[], now: Date): DueItem<P, S>[] {
-  const items: DueItem<P, S>[] = [];
+  P extends { solutions: readonly DueSolutionInput[] },
+>(problems: readonly P[], now: Date): DueItem<P, P["solutions"][number]>[] {
+  const items: DueItem<P, P["solutions"][number]>[] = [];
   for (const problem of problems) {
     if (hasIndependentSolution(problem)) continue;
     for (const solution of problem.solutions) {

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { buildDigest, digestSubject } from "./digest";
+import { buildDigest, digestSubject, type Digest } from "./digest";
 import {
   checkDueReviews,
   type NotifiableProblem,
@@ -35,8 +35,8 @@ function problem(
 }
 
 function makeDeps(problems: NotifiableProblem[]) {
-  const send = vi.fn(async () => {});
-  const stampNotified = vi.fn(async () => {});
+  const send = vi.fn(async (_digest: Digest) => {});
+  const stampNotified = vi.fn(async (_ids: string[], _at: Date) => {});
   return {
     deps: {
       now: () => NOW,

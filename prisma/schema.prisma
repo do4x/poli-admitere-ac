@@ -1,0 +1,53 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:../data/departaj.db"
+}
+
+enum ExamKind {
+  ADMITERE
+  PREADMITERE
+}
+
+enum Subject {
+  MATE
+  INFO
+}
+
+model Exam {
+  id       String    @id @default(cuid())
+  year     Int
+  kind     ExamKind
+  subject  Subject
+  session  String?
+  problems Problem[]
+
+  @@unique([year, kind, subject, session])
+}
+
+model Problem {
+  id            String     @id @default(cuid())
+  examId        String
+  exam          Exam       @relation(fields: [examId], references: [id])
+  number        String
+  latex         String
+  isDepartajare Boolean    @default(false)
+  solutions     Solution[]
+  createdAt     DateTime   @default(now())
+
+  @@unique([examId, number])
+}
+
+model Solution {
+  id          String    @id @default(cuid())
+  problemId   String
+  problem     Problem   @relation(fields: [problemId], references: [id])
+  pdfPath     String
+  submittedAt DateTime  @default(now())
+  aiAssisted  Boolean   @default(false)
+  reviewDueAt DateTime?
+  notifiedAt  DateTime?
+}

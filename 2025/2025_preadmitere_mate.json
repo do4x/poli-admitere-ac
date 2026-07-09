@@ -1,0 +1,60 @@
+{
+  "exam": {
+    "year": 2025,
+    "kind": "PREADMITERE",
+    "subject": "MATE",
+    "session": "5 aprilie — Varianta A"
+  },
+  "problems": [
+    {
+      "number": "1",
+      "isDepartajare": false,
+      "latex": "Mulțimea soluțiilor reale ale ecuației $\\sqrt{6x-8}=x$ este:\n\na) $\\{-3;-2\\}$; b) $\\{-1;0\\}$; c) $\\{3;5\\}$; d) $\\{2;4\\}$; e) $\\{-4;-2\\}$; f) $\\{1;3\\}$."
+    },
+    {
+      "number": "2",
+      "isDepartajare": false,
+      "latex": "Să se rezolve inecuația $3x+1>2x+2$.\n\na) $x\\in(-1,1)$; b) $x\\in(1,\\infty)$; c) $x\\in(-\\infty,-1)$; d) $x\\in(-2,-1)$; e) $x\\in(-\\infty,-2)$; f) $x\\in(-\\infty,0)$."
+    },
+    {
+      "number": "3",
+      "isDepartajare": true,
+      "latex": "Fie $a,b,c,d\\in\\mathbb{N}^*$ astfel încât $\\log_a b=\\dfrac{4}{3}$ și $\\log_c d=\\dfrac{5}{6}$. Dacă $c-a=37$, atunci $b-d$ este:\n\na) $49$; b) $56$; c) $38$; d) $52$; e) $42$; f) $64$."
+    },
+    {
+      "number": "4",
+      "isDepartajare": false,
+      "latex": "Fie $A=\\begin{pmatrix} m & -1 \\\\ 2 & m+2 \\end{pmatrix}\\in\\mathcal{M}_2(\\mathbb{R})$. Știind că $\\det(A)=1$, să se calculeze $m^2+2$.\n\na) $2$; b) $11$; c) $3$; d) $5$; e) $4$; f) $6$."
+    },
+    {
+      "number": "5",
+      "isDepartajare": false,
+      "latex": "Să se determine suma modulelor soluțiilor ecuației $3^{x^2+4x+6}=27$.\n\na) $7$; b) $5$; c) $1$; d) $6$; e) $3$; f) $4$."
+    },
+    {
+      "number": "6",
+      "isDepartajare": true,
+      "latex": "Fie funcțiile $f,g:(0,\\infty)\\to\\mathbb{R}$, $f(x)=\\operatorname{arctg}\\sqrt{x}$ și $g(x)=\\dfrac{1}{4}(\\pi+\\ln x)$. Dacă tangenta comună într-un punct comun al graficelor funcțiilor $f$ și $g$ intersectează axa $Ox$ în punctul $P(\\alpha,0)$, atunci $\\alpha$ este:\n\na) $\\pi$; b) $1$; c) $1-\\pi$; d) $1+\\pi$; e) $\\dfrac{\\pi}{2}+1$; f) $0$."
+    },
+    {
+      "number": "7",
+      "isDepartajare": true,
+      "latex": "Fie sistemul de ecuații liniare\n$$\\begin{cases} 2mx+y+(m+1)z=2m+1 \\\\ (m+2)x+(m+1)y+(m+2)z=2 \\\\ 3mx+y+(2m+1)z=1 \\end{cases}$$\nunde $m$ este un parametru real. Notăm cu $A$ mulțimea valorilor lui $m$ pentru care sistemul este incompatibil. Atunci:\n\na) $A=\\{0;1\\}$; b) $A=\\{1;2\\}$; c) $A=\\{-1;0;1\\}$; d) $A=\\{-1;1\\}$; e) $A=\\{-2;-1\\}$; f) $A=\\{-2;0;1\\}$."
+    },
+    {
+      "number": "8",
+      "isDepartajare": false,
+      "latex": "Dacă $x_1$ și $x_2$ sunt soluțiile reale ale ecuației $x^2+3x+1=0$, atunci valoarea expresiei $\\left(\\dfrac{x_1}{x_2+1}\\right)^2+\\left(\\dfrac{x_2}{x_1+1}\\right)^2$ este:\n\na) $20$; b) $10$; c) $4$; d) $13$; e) $18$; f) $25$."
+    },
+    {
+      "number": "9",
+      "isDepartajare": true,
+      "latex": "Fie $f:\\mathbb{R}\\to\\mathbb{R}$ o funcție derivabilă, astfel încât $x^2+2\\int_0^x t\\cdot f(t)\\,dt+2=(x^2+1)\\cdot f(x)+\\ln 2$, $(\\forall)\\, x\\in\\mathbb{R}$. Atunci $\\int_0^1 f(x)\\,dx$ este:\n\na) $\\dfrac{\\pi}{2}$; b) $\\pi$; c) $1$; d) $\\dfrac{\\pi}{3}$; e) $\\dfrac{\\pi}{4}$; f) $\\dfrac{3\\pi}{4}$."
+    },
+    {
+      "number": "10",
+      "isDepartajare": false,
+      "latex": "Fie $(a_n)_{n\\ge 1}$ o progresie aritmetică și $S_n$ suma primilor $n$ termeni ai acesteia. Dacă $S_5=40$ și $S_{10}=155$, să se calculeze $S_{15}$.\n\na) $344$; b) $346$; c) $345$; d) $340$; e) $343$; f) $347$."
+    }
+  ]
+}

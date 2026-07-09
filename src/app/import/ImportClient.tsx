@@ -31,6 +31,11 @@ export function ImportClient() {
       const text = await file.text();
       setJsonText(text);
       setPreview(await dryRunImport(text));
+    } catch (error) {
+      setPreview({
+        ok: false,
+        error: error instanceof Error ? error.message : String(error),
+      });
     } finally {
       setBusy(false);
     }
@@ -54,6 +59,11 @@ export function ImportClient() {
         setJsonText(null);
         setFileName(null);
       }
+    } catch (error) {
+      setResult({
+        ok: false,
+        error: error instanceof Error ? error.message : String(error),
+      });
     } finally {
       setBusy(false);
     }
@@ -130,7 +140,15 @@ export function ImportClient() {
                   >
                     <td className="py-1 pr-3 font-medium">{problem.number}</td>
                     <td className="py-1 pr-3">
-                      {problem.isDepartajare ? (
+                      {problem.departajareChange ? (
+                        <span
+                          className="rounded border border-red-600 bg-red-50 px-1.5 py-0.5 text-xs font-semibold text-red-700"
+                          title="Fișierul suprascrie starea setată în aplicație"
+                        >
+                          {problem.departajareChange.from ? "da" : "nu"} →{" "}
+                          {problem.departajareChange.to ? "da" : "nu"}
+                        </span>
+                      ) : problem.isDepartajare ? (
                         <span className="rounded border border-amber-600 bg-amber-50 px-1.5 py-0.5 text-xs font-semibold text-amber-700">
                           da
                         </span>

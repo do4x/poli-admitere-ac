@@ -1,6 +1,6 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 import type { ImportFile } from "./schema";
-import { planImport, type ImportPlan } from "./plan";
+import { planImport, type ImportPlan, type PlannedProblem } from "./plan";
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -8,6 +8,7 @@ export interface RunImportResult {
   examCreated: boolean;
   examId: string;
   counts: ImportPlan["counts"];
+  problems: PlannedProblem[];
 }
 
 /**
@@ -71,6 +72,11 @@ export async function runImport(
       }
     }
 
-    return { examCreated: exam === null, examId: examRow.id, counts: plan.counts };
+    return {
+      examCreated: exam === null,
+      examId: examRow.id,
+      counts: plan.counts,
+      problems: plan.problems,
+    };
   });
 }

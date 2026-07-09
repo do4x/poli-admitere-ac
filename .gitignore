@@ -19,3 +19,4 @@ data/solutions/
 *.log
 .DS_Store
 .playwright-mcp/
+tsconfig.tsbuildinfo

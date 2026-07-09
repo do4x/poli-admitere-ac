@@ -56,6 +56,15 @@ async function main(): Promise<void> {
         `${name}: ${label} — examen ${result.examCreated ? "creat" : "existent"}, ` +
           `${created} create, ${updated} actualizate, ${skipped} sărite`,
       );
+      for (const problem of result.problems) {
+        if (problem.departajareChange) {
+          const { from, to } = problem.departajareChange;
+          console.warn(
+            `${name}: ATENȚIE — problema ${problem.number}: departajare ` +
+              `${from ? "da" : "nu"} → ${to ? "da" : "nu"} (fișierul suprascrie starea din aplicație)`,
+          );
+        }
+      }
     } catch (error) {
       console.error(`${name}: import eșuat — ${message(error)}`);
       failed += 1;

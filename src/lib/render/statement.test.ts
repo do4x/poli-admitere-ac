@@ -44,4 +44,13 @@ describe("renderStatementHtml", () => {
     expect(html).toContain("katex");
     expect(html).not.toContain("ParseError");
   });
+
+  it("strips NUL characters so forged placeholders cannot inject content", async () => {
+    const nul = String.fromCharCode(0);
+    const forged = `Fie $x$ fals: ${nul}0${nul} si ${nul}99${nul}.`;
+    const html = await renderStatementHtml(forged);
+    expect(html).not.toContain("undefined");
+    // Exactly one KaTeX span: the real $x$, not a duplicate via  0 .
+    expect(html.match(/class="katex"/g)).toHaveLength(1);
+  });
 });

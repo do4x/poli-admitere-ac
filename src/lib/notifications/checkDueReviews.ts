@@ -39,7 +39,9 @@ export interface CheckDueReviewsResult {
 /**
  * The engine behind the 4-day review emails. Stamping happens only after a
  * successful send, so a failed send retries on the next cycle; a successful
- * send never repeats (notifiedAt dedupe).
+ * send never repeats (notifiedAt dedupe). Deliberate tradeoff: if the send
+ * succeeds but stamping fails, the digest repeats next cycle (at-least-once)
+ * — a duplicate nag beats a silently lost one.
  */
 export async function checkDueReviews(
   deps: CheckDueReviewsDeps,

@@ -1,9 +1,10 @@
 "use server";
 
+import { unlink } from "node:fs/promises";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { computeReviewDueAt } from "@/lib/domain";
-import { savePdf } from "@/lib/storage";
+import { savePdf, solutionAbsolutePath } from "@/lib/storage";
 
 export interface UploadState {
   error: string | null;
@@ -43,15 +44,26 @@ export async function uploadSolution(
   const submittedAt = new Date();
   const pdfPath = await savePdf(problem.id, bytes, submittedAt);
 
-  await prisma.solution.create({
-    data: {
-      problemId: problem.id,
-      pdfPath,
-      submittedAt,
-      aiAssisted,
-      reviewDueAt: computeReviewDueAt(submittedAt, aiAssisted),
-    },
-  });
+  try {
+    await prisma.solution.create({
+      data: {
+        problemId: problem.id,
+        pdfPath,
+        submittedAt,
+        aiAssisted,
+        reviewDueAt: computeReviewDueAt(submittedAt, aiAssisted),
+      },
+    });
+  } catch (error) {
+    // Don't leave an orphaned PDF; surface the failure in the form instead
+    // of crashing (e.g. SQLite locked by a concurrent CLI import).
+    await unlink(solutionAbsolutePath(pdfPath)).catch(() => {});
+    console.error("[departaj] Salvarea soluției a eșuat:", error);
+    return {
+      error: "Salvarea în baza de date a eșuat. Încearcă din nou.",
+      uploadedAt: null,
+    };
+  }
 
   revalidatePath("/");
   revalidatePath("/exams");

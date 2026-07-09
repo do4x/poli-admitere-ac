@@ -24,6 +24,7 @@ export type DryRunResult =
         number: string;
         isDepartajare: boolean;
         action: ProblemAction;
+        departajareChange?: { from: boolean; to: boolean };
       }[];
     };
 
@@ -46,6 +47,7 @@ export async function dryRunImport(jsonText: string): Promise<DryRunResult> {
       number: problem.number,
       isDepartajare: problem.isDepartajare,
       action: problem.action,
+      departajareChange: problem.departajareChange,
     })),
   };
 }

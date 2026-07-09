@@ -10,7 +10,8 @@ import { codeToHtml } from "shiki";
 
 const FENCE = /```(\w*(?:\+\+)?)\r?\n([\s\S]*?)```/g;
 const MATH = /\$\$([\s\S]+?)\$\$|\$([^$\n]+?)\$/g;
-// NUL can't occur in JSON-sourced text, so it is a collision-proof sentinel.
+// NUL sentinel: renderMathText strips NUL from its input first (JSON can
+// smuggle one in as \u0000-escape), so collisions are impossible.
 const PLACEHOLDER = /\u0000(\d+)\u0000/g;
 
 const KNOWN_LANGS = new Set(["cpp", "c", "pascal"]);
@@ -31,7 +32,7 @@ function escapeHtml(text: string): string {
 
 function renderMathText(text: string): string {
   const rendered: string[] = [];
-  const withPlaceholders = text.replace(MATH, (_match, display, inline) => {
+  const withPlaceholders = text.replaceAll("\u0000", "").replace(MATH, (_match, display, inline) => {
     const source = (display ?? inline) as string;
     const html = katex.renderToString(source, {
       displayMode: display !== undefined,

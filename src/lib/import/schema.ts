@@ -3,10 +3,12 @@ import { z } from "zod";
 export const examKindSchema = z.enum(["ADMITERE", "PREADMITERE"]);
 export const subjectSchema = z.enum(["MATE", "INFO"]);
 
+// Size caps: the server-action body limit is 50 MB, so without per-field
+// bounds any LAN peer could bloat the DB / stall the KaTeX renderer.
 export const importProblemSchema = z.object({
-  number: z.string().min(1),
+  number: z.string().min(1).max(32),
   isDepartajare: z.boolean().default(false),
-  latex: z.string().min(1),
+  latex: z.string().min(1).max(50_000),
 });
 
 export const importFileSchema = z
@@ -18,10 +20,11 @@ export const importFileSchema = z
       session: z
         .string()
         .min(1)
+        .max(200)
         .nullish()
         .transform((value) => value ?? null),
     }),
-    problems: z.array(importProblemSchema).min(1),
+    problems: z.array(importProblemSchema).min(1).max(500),
   })
   .superRefine((file, ctx) => {
     const seen = new Set<string>();
@@ -52,7 +55,8 @@ export function parseImportFile(
   | { ok: false; error: string } {
   let raw: unknown;
   try {
-    raw = JSON.parse(jsonText);
+    // PowerShell 5.1's `-Encoding utf8` writes a BOM, which JSON.parse rejects.
+    raw = JSON.parse(jsonText.replace(/^\uFEFF/, ""));
   } catch (error) {
     return {
       ok: false,

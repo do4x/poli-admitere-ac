@@ -133,3 +133,55 @@ describe("planImport", () => {
     expect(plan.counts).toEqual({ created: 1, updated: 1, skipped: 1 });
   });
 });
+
+describe("review hardening (session 2 findings)", () => {
+  it("tolerates a UTF-8 BOM (PowerShell 5.1 Out-File writes one)", () => {
+    const result = parseImportFile("\uFEFF" + JSON.stringify(validFile));
+    expect(result.ok).toBe(true);
+  });
+
+  it("rejects oversized latex fields", () => {
+    const bloated = {
+      ...validFile,
+      problems: [
+        { number: "1", isDepartajare: false, latex: "x".repeat(50_001) },
+      ],
+    };
+    expect(parseImportFile(JSON.stringify(bloated)).ok).toBe(false);
+  });
+
+  it("rejects more than 500 problems in one file", () => {
+    const many = {
+      ...validFile,
+      problems: Array.from({ length: 501 }, (_, i) => ({
+        number: String(i + 1),
+        isDepartajare: false,
+        latex: "$x$",
+      })),
+    };
+    expect(parseImportFile(JSON.stringify(many)).ok).toBe(false);
+  });
+
+  it("flags isDepartajare flips on update so callers can warn the owner", () => {
+    const plan = planImport(
+      [{ number: "3", latex: "L", isDepartajare: true }],
+      [{ number: "3", latex: "L", isDepartajare: false }],
+      true,
+    );
+    expect(plan.problems[0]!.action).toBe("update");
+    expect(plan.problems[0]!.departajareChange).toEqual({
+      from: true,
+      to: false,
+    });
+  });
+
+  it("does not flag departajareChange on latex-only updates", () => {
+    const plan = planImport(
+      [{ number: "3", latex: "old", isDepartajare: true }],
+      [{ number: "3", latex: "new", isDepartajare: true }],
+      true,
+    );
+    expect(plan.problems[0]!.action).toBe("update");
+    expect(plan.problems[0]!.departajareChange).toBeUndefined();
+  });
+});

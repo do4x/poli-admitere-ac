@@ -8,6 +8,12 @@ export interface ProblemFields {
 
 export interface PlannedProblem extends ProblemFields {
   action: ProblemAction;
+  /**
+   * Present on updates that flip isDepartajare. Import follows upsert
+   * semantics (file wins), so a re-import can silently revert a flag set via
+   * the UI toggle — callers must surface this to the owner.
+   */
+  departajareChange?: { from: boolean; to: boolean };
 }
 
 export interface ImportPlan {
@@ -40,7 +46,14 @@ export function planImport(
     } else {
       action = "update";
     }
-    return { ...p, action };
+    const planned: PlannedProblem = { ...p, action };
+    if (current && current.isDepartajare !== p.isDepartajare) {
+      planned.departajareChange = {
+        from: current.isDepartajare,
+        to: p.isDepartajare,
+      };
+    }
+    return planned;
   });
 
   return {

@@ -94,28 +94,35 @@ export default async function ProblemPage({
           >
             {status.label}
           </span>
+          {problem.tags.map((tag) => (
+            <span
+              key={tag.id}
+              className="rounded-full border border-line bg-surface px-2.5 py-0.5 text-xs font-medium text-muted"
+            >
+              {tag.name}
+            </span>
+          ))}
         </div>
-      </div>
-
-      <div className="card p-4">
-        <TagEditor
-          problemId={problem.id}
-          tags={problem.tags}
-          available={availableTags}
-        />
       </div>
 
       <section className="card p-6">
         <Statement latex={problem.latex} />
       </section>
 
-      {hasKey && (
+      {hasKey ? (
         <GrilaCheck
           problemId={problem.id}
           verified={state === "grila"}
           history={grilaHistory}
           revealedAnswer={revealed ? (keyRow?.correctAnswer ?? null) : null}
         />
+      ) : (
+        <section className="card flex items-center justify-between gap-3 p-4">
+          <h2 className="text-sm font-semibold text-ink">Verificare grilă</h2>
+          <p className="text-xs text-faint">
+            Răspunsul oficial nu a fost încă importat pentru această problemă.
+          </p>
+        </section>
       )}
 
       <section className="space-y-4">
@@ -158,6 +165,13 @@ export default async function ProblemPage({
         })}
         <UploadForm problemId={problem.id} />
       </section>
+
+      {/* Curation tooling — becomes admin-only when auth lands (MIGRATION.md). */}
+      <TagEditor
+        problemId={problem.id}
+        tags={problem.tags}
+        available={availableTags}
+      />
     </div>
   );
 }

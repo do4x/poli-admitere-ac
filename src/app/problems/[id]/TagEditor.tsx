@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import {
   addTagAction,
   createTagAction,
@@ -24,6 +24,7 @@ const CONTROL =
   "rounded-lg border border-line bg-card px-2.5 py-1 text-sm shadow-soft focus:border-brand";
 
 export function TagEditor({ problemId, tags, available }: TagEditorProps) {
+  const [open, setOpen] = useState(false);
   const [addState, addAction] = useActionState(
     addTagAction.bind(null, problemId),
     INITIAL,
@@ -36,12 +37,35 @@ export function TagEditor({ problemId, tags, available }: TagEditorProps) {
   const atCap = tags.length >= 3;
   const error = addState.error ?? createState.error;
 
+  // Curation tooling, collapsed by default; admin-only once auth exists.
+  if (!open) {
+    return (
+      <div className="text-right">
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="text-xs text-faint underline-offset-2 hover:text-ink hover:underline"
+        >
+          Gestionare tipuri (administrare)
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-2.5">
+    <div className="card space-y-2.5 p-4">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-[11px] font-semibold uppercase tracking-wide text-faint">
-          Tipuri
+          Tipuri (administrare)
         </span>
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="ml-auto text-xs text-faint hover:text-ink"
+          aria-label="Închide gestionarea tipurilor"
+        >
+          închide ×
+        </button>
         {tags.length === 0 && (
           <span className="text-xs text-faint">neclasificat</span>
         )}

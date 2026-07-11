@@ -16,44 +16,43 @@ export interface ManagedTag {
 }
 
 const INITIAL: TaxonomyActionState = { error: null };
-const SUBJECTS: { key: "MATE" | "INFO"; label: string }[] = [
-  { key: "MATE", label: "Matematică" },
-  { key: "INFO", label: "Informatică" },
+const SUBJECTS: { key: "MATE" | "INFO"; label: string; dot: string }[] = [
+  { key: "MATE", label: "Matematică", dot: "bg-blue-500" },
+  { key: "INFO", label: "Informatică", dot: "bg-violet-500" },
 ];
 
+const INPUT =
+  "rounded-lg border border-line bg-card px-2.5 py-1 text-sm shadow-soft focus:border-brand";
+const BTN =
+  "rounded-lg border border-line px-2.5 py-1 text-xs font-semibold text-muted transition-colors hover:bg-surface hover:text-ink";
+
 function TagRow({ tag }: { tag: ManagedTag }) {
-  const [state, action] = useActionState(
-    renameTag.bind(null, tag.id),
-    INITIAL,
-  );
+  const [state, action] = useActionState(renameTag.bind(null, tag.id), INITIAL);
   const [confirming, setConfirming] = useState(false);
 
   return (
-    <li className="flex flex-wrap items-center gap-2 py-1">
+    <li className="flex flex-wrap items-center gap-2 py-1.5">
       <form action={action} className="flex items-center gap-1">
         <input
           name="name"
           defaultValue={tag.name}
           maxLength={60}
-          className="w-44 rounded border border-stone-300 px-2 py-0.5 text-sm"
+          className={`w-44 ${INPUT}`}
           aria-label={`Redenumește ${tag.name}`}
         />
-        <button
-          type="submit"
-          className="rounded border border-stone-300 px-2 py-0.5 text-xs font-semibold text-stone-600 hover:bg-stone-100"
-        >
+        <button type="submit" className={BTN}>
           Redenumește
         </button>
       </form>
-      <span className="text-xs text-stone-400">{tag.count} probleme</span>
+      <span className="text-xs text-faint tabular-nums">{tag.count} probleme</span>
 
       {confirming && tag.count > 0 ? (
-        <span className="flex items-center gap-2 text-xs text-red-600">
+        <span className="flex items-center gap-2 text-xs text-rose-600">
           {tag.count} probleme își pierd eticheta.
           <form action={deleteTag.bind(null, tag.id)}>
             <button
               type="submit"
-              className="rounded border border-red-500 px-2 py-0.5 font-semibold text-red-600 hover:bg-red-50"
+              className="rounded-lg border border-rose-500 px-2.5 py-1 font-semibold text-rose-600 hover:bg-rose-50"
             >
               Confirmă
             </button>
@@ -61,7 +60,7 @@ function TagRow({ tag }: { tag: ManagedTag }) {
           <button
             type="button"
             onClick={() => setConfirming(false)}
-            className="text-stone-500 hover:text-stone-800"
+            className="text-muted hover:text-ink"
           >
             Renunță
           </button>
@@ -70,7 +69,7 @@ function TagRow({ tag }: { tag: ManagedTag }) {
         <form action={deleteTag.bind(null, tag.id)}>
           <button
             type="submit"
-            className="rounded border border-stone-300 px-2 py-0.5 text-xs font-semibold text-stone-400 hover:bg-red-50 hover:text-red-600"
+            className="rounded-lg border border-line px-2.5 py-1 text-xs font-semibold text-faint hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600"
           >
             Șterge
           </button>
@@ -79,13 +78,13 @@ function TagRow({ tag }: { tag: ManagedTag }) {
         <button
           type="button"
           onClick={() => setConfirming(true)}
-          className="rounded border border-stone-300 px-2 py-0.5 text-xs font-semibold text-stone-400 hover:bg-red-50 hover:text-red-600"
+          className="rounded-lg border border-line px-2.5 py-1 text-xs font-semibold text-faint hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600"
         >
           Șterge
         </button>
       )}
 
-      {state.error && <span className="text-xs text-red-600">{state.error}</span>}
+      {state.error && <span className="text-xs text-rose-600">{state.error}</span>}
     </li>
   );
 }
@@ -95,19 +94,14 @@ function CreateForm({ subject }: { subject: "MATE" | "INFO" }) {
   return (
     <form action={action} className="mt-2 flex items-center gap-1">
       <input type="hidden" name="subject" value={subject} />
-      <input
-        name="name"
-        maxLength={60}
-        placeholder="Tip nou"
-        className="w-44 rounded border border-stone-300 px-2 py-0.5 text-sm"
-      />
+      <input name="name" maxLength={60} placeholder="Tip nou" className={`w-44 ${INPUT}`} />
       <button
         type="submit"
-        className="rounded border border-stone-300 px-2 py-0.5 text-xs font-semibold text-stone-600 hover:bg-stone-100"
+        className="rounded-lg bg-brand px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-brand-700"
       >
         Adaugă tip
       </button>
-      {state.error && <span className="text-xs text-red-600">{state.error}</span>}
+      {state.error && <span className="text-xs text-rose-600">{state.error}</span>}
     </form>
   );
 }
@@ -116,23 +110,24 @@ export function TaxonomyManager({ tags }: { tags: ManagedTag[] }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="rounded border border-stone-300 bg-white">
+    <div className="card overflow-hidden">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between px-3 py-2 text-sm font-semibold text-stone-600 hover:bg-stone-50"
+        className="flex w-full items-center justify-between px-4 py-3 text-sm font-semibold text-muted transition-colors hover:bg-surface"
       >
         Gestionare tipuri
-        <span className="text-stone-400">{open ? "−" : "+"}</span>
+        <span className="text-faint">{open ? "−" : "+"}</span>
       </button>
       {open && (
-        <div className="grid gap-6 border-t border-stone-200 p-3 sm:grid-cols-2">
-          {SUBJECTS.map(({ key, label }) => (
+        <div className="grid gap-6 border-t border-line p-4 sm:grid-cols-2">
+          {SUBJECTS.map(({ key, label, dot }) => (
             <div key={key}>
-              <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-stone-400">
+              <h3 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-faint">
+                <span className={`h-2 w-2 rounded-full ${dot}`} />
                 {label}
               </h3>
-              <ul className="divide-y divide-stone-100">
+              <ul className="divide-y divide-line">
                 {tags
                   .filter((t) => t.subject === key)
                   .map((tag) => (

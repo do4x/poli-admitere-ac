@@ -16,11 +16,12 @@ interface Tag {
 interface TagEditorProps {
   problemId: string;
   tags: Tag[];
-  /** Tags of the problem's subject that are not already attached. */
   available: Tag[];
 }
 
 const INITIAL: TagActionState = { error: null };
+const CONTROL =
+  "rounded-lg border border-line bg-card px-2.5 py-1 text-sm shadow-soft focus:border-brand";
 
 export function TagEditor({ problemId, tags, available }: TagEditorProps) {
   const [addState, addAction] = useActionState(
@@ -36,24 +37,24 @@ export function TagEditor({ problemId, tags, available }: TagEditorProps) {
   const error = addState.error ?? createState.error;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2.5">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold uppercase tracking-wide text-stone-400">
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-faint">
           Tipuri
         </span>
         {tags.length === 0 && (
-          <span className="text-xs text-stone-400">neclasificat</span>
+          <span className="text-xs text-faint">neclasificat</span>
         )}
         {tags.map((tag) => (
           <span
             key={tag.id}
-            className="inline-flex items-center gap-1 rounded border border-amber-600 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700"
+            className="inline-flex items-center gap-1.5 rounded-full border border-brand-100 bg-brand-50 px-2.5 py-0.5 text-xs font-semibold text-brand-700"
           >
             {tag.name}
             <form action={removeTagFromProblem.bind(null, problemId, tag.id)}>
               <button
                 type="submit"
-                className="text-amber-600 hover:text-amber-900"
+                className="text-brand/60 hover:text-brand-700"
                 title={`Scoate „${tag.name}”`}
                 aria-label={`Scoate ${tag.name}`}
               >
@@ -68,11 +69,7 @@ export function TagEditor({ problemId, tags, available }: TagEditorProps) {
         <div className="flex flex-wrap items-center gap-3">
           {available.length > 0 && (
             <form action={addAction} className="flex items-center gap-1">
-              <select
-                name="tagId"
-                defaultValue=""
-                className="rounded border border-stone-300 px-2 py-1 text-sm"
-              >
+              <select name="tagId" defaultValue="" className={CONTROL}>
                 <option value="" disabled>
                   Alege tip…
                 </option>
@@ -84,23 +81,17 @@ export function TagEditor({ problemId, tags, available }: TagEditorProps) {
               </select>
               <button
                 type="submit"
-                className="rounded border border-stone-300 px-2 py-1 text-sm font-semibold text-stone-600 hover:bg-stone-100"
+                className="rounded-lg border border-line px-2.5 py-1 text-sm font-semibold text-muted transition-colors hover:bg-surface hover:text-ink"
               >
                 Adaugă
               </button>
             </form>
           )}
           <form action={createAction} className="flex items-center gap-1">
-            <input
-              name="name"
-              type="text"
-              maxLength={60}
-              placeholder="Tip nou"
-              className="rounded border border-stone-300 px-2 py-1 text-sm"
-            />
+            <input name="name" type="text" maxLength={60} placeholder="Tip nou" className={CONTROL} />
             <button
               type="submit"
-              className="rounded border border-stone-300 px-2 py-1 text-sm font-semibold text-stone-600 hover:bg-stone-100"
+              className="rounded-lg bg-brand px-2.5 py-1 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
             >
               Creează
             </button>
@@ -108,7 +99,7 @@ export function TagEditor({ problemId, tags, available }: TagEditorProps) {
         </div>
       )}
 
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <p className="text-xs text-rose-600">{error}</p>}
     </div>
   );
 }

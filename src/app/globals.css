@@ -1,12 +1,89 @@
 @import "tailwindcss";
 
+@theme {
+  /* Neutral surfaces & ink */
+  --color-surface: #f5f6f8;
+  --color-card: #ffffff;
+  --color-ink: #0f1729;
+  --color-muted: #5b6573;
+  --color-faint: #98a1b0;
+  --color-line: #e8eaf0;
+
+  /* Brand (indigo) */
+  --color-brand: #4f46e5;
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #e0e7ff;
+  --color-brand-600: #4f46e5;
+  --color-brand-700: #4338ca;
+
+  /* Fonts (variables injected by next/font in layout) */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", sans-serif;
+  --font-display: var(--font-display-face), var(--font-inter), ui-sans-serif,
+    system-ui, sans-serif;
+
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+
+  --shadow-soft: 0 1px 2px rgba(15, 23, 41, 0.04),
+    0 2px 8px rgba(15, 23, 41, 0.05);
+  --shadow-lift: 0 8px 24px rgba(15, 23, 41, 0.1);
+}
+
 :root {
   color-scheme: light;
 }
 
 body {
-  @apply bg-stone-100 text-stone-900 antialiased;
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  @apply bg-surface text-ink antialiased;
+  font-family: var(--font-sans);
+  /* Subtle math-paper dot grid — a quiet nod to the domain. */
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    rgba(15, 23, 41, 0.035) 1px,
+    transparent 0
+  );
+  background-size: 22px 22px;
+  background-attachment: fixed;
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-line bg-card shadow-soft;
+  }
+
+  /* Aurora gradient used behind the dashboard hero. */
+  .hero-mesh {
+    background:
+      radial-gradient(
+        62% 80% at 12% 8%,
+        rgba(79, 70, 229, 0.14),
+        transparent 60%
+      ),
+      radial-gradient(
+        52% 72% at 92% 18%,
+        rgba(37, 99, 235, 0.12),
+        transparent 60%
+      ),
+      radial-gradient(
+        60% 90% at 72% 108%,
+        rgba(124, 58, 237, 0.12),
+        transparent 60%
+      ),
+      var(--color-card);
+  }
+}
+
+/* Focus ring, consistent across interactive elements. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
 /* KaTeX display math can overflow on narrow screens — scroll, don't break layout */
@@ -18,5 +95,5 @@ body {
 
 /* Shiki code blocks */
 pre.shiki {
-  @apply my-2 overflow-x-auto rounded border border-stone-200 p-3 text-sm leading-relaxed;
+  @apply my-2 overflow-x-auto rounded-xl border border-line p-3 text-sm leading-relaxed;
 }

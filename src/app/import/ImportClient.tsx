@@ -10,9 +10,9 @@ import {
 } from "./actions";
 
 const ACTION_LABEL = {
-  create: { text: "nouă", className: "bg-green-100 text-green-800" },
-  update: { text: "se actualizează", className: "bg-amber-100 text-amber-800" },
-  skip: { text: "neschimbată", className: "bg-stone-200 text-stone-600" },
+  create: { text: "nouă", className: "bg-green-100 text-green-700" },
+  update: { text: "se actualizează", className: "bg-orange-100 text-orange-700" },
+  skip: { text: "neschimbată", className: "bg-surface text-muted" },
 } as const;
 
 export function ImportClient() {
@@ -78,16 +78,16 @@ export function ImportClient() {
         }}
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
-        className={`flex h-40 cursor-pointer flex-col items-center justify-center gap-2 rounded border-2 border-dashed bg-white text-sm text-stone-500 transition-colors ${
-          dragging ? "border-stone-800 bg-stone-50" : "border-stone-300"
+        className={`flex h-44 cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed text-sm transition-colors ${
+          dragging
+            ? "border-brand bg-brand-50 text-brand-700"
+            : "border-line bg-card text-muted hover:border-brand/40"
         }`}
       >
-        <span className="font-medium">
+        <span className="font-semibold text-ink">
           Trage un fișier JSON aici sau apasă pentru a alege
         </span>
-        <span className="text-xs">
-          formatul de import descris în claude.md
-        </span>
+        <span className="text-xs">formatul de import descris în claude.md</span>
         <input
           type="file"
           accept=".json,application/json"
@@ -100,34 +100,34 @@ export function ImportClient() {
         />
       </label>
 
-      {busy && <p className="text-sm text-stone-500">Se procesează…</p>}
+      {busy && <p className="text-sm text-muted">Se procesează…</p>}
 
       {preview && !preview.ok && (
-        <div className="rounded border border-red-300 bg-red-50 p-4 text-sm text-red-800">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
           <p className="font-semibold">{fileName}: fișier invalid</p>
           <p className="mt-1 whitespace-pre-wrap">{preview.error}</p>
         </div>
       )}
 
       {preview && preview.ok && (
-        <div className="space-y-3 rounded border border-stone-300 bg-white p-4">
+        <div className="card space-y-3 p-4">
           <div className="flex items-baseline justify-between">
             <h2 className="font-semibold">{preview.examLabel}</h2>
-            <span className="text-xs text-stone-500">
+            <span className="text-xs text-muted">
               {preview.examExists ? "examen existent" : "examen nou"}
             </span>
           </div>
-          <p className="text-sm text-stone-600">
+          <p className="text-sm text-muted">
             {preview.counts.created} de creat, {preview.counts.updated} de
             actualizat, {preview.counts.skipped} neschimbate — nimic nu a fost
             scris încă.
           </p>
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-stone-200 text-left text-xs uppercase tracking-wide text-stone-500">
-                <th className="py-1 pr-3">Nr.</th>
-                <th className="py-1 pr-3">Departajare</th>
-                <th className="py-1">Acțiune</th>
+              <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-faint">
+                <th className="py-1.5 pr-3">Nr.</th>
+                <th className="py-1.5 pr-3">Departajare</th>
+                <th className="py-1.5">Acțiune</th>
               </tr>
             </thead>
             <tbody>
@@ -136,29 +136,29 @@ export function ImportClient() {
                 return (
                   <tr
                     key={problem.number}
-                    className="border-b border-stone-100 last:border-0"
+                    className="border-b border-line/60 last:border-0"
                   >
-                    <td className="py-1 pr-3 font-medium">{problem.number}</td>
-                    <td className="py-1 pr-3">
+                    <td className="py-1.5 pr-3 font-medium">{problem.number}</td>
+                    <td className="py-1.5 pr-3">
                       {problem.departajareChange ? (
                         <span
-                          className="rounded border border-red-600 bg-red-50 px-1.5 py-0.5 text-xs font-semibold text-red-700"
+                          className="rounded-full border border-rose-400 bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-700"
                           title="Fișierul suprascrie starea setată în aplicație"
                         >
                           {problem.departajareChange.from ? "da" : "nu"} →{" "}
                           {problem.departajareChange.to ? "da" : "nu"}
                         </span>
                       ) : problem.isDepartajare ? (
-                        <span className="rounded border border-amber-600 bg-amber-50 px-1.5 py-0.5 text-xs font-semibold text-amber-700">
+                        <span className="rounded-full border border-amber-500 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">
                           da
                         </span>
                       ) : (
-                        <span className="text-stone-400">nu</span>
+                        <span className="text-faint">nu</span>
                       )}
                     </td>
-                    <td className="py-1">
+                    <td className="py-1.5">
                       <span
-                        className={`rounded px-1.5 py-0.5 text-xs font-semibold ${label.className}`}
+                        className={`rounded-full px-2 py-0.5 text-xs font-semibold ${label.className}`}
                       >
                         {label.text}
                       </span>
@@ -172,7 +172,7 @@ export function ImportClient() {
             type="button"
             onClick={handleConfirm}
             disabled={busy}
-            className="rounded bg-stone-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-stone-700 disabled:opacity-50"
+            className="rounded-lg bg-brand px-4 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:opacity-50"
           >
             Importă
           </button>
@@ -180,13 +180,13 @@ export function ImportClient() {
       )}
 
       {result && !result.ok && (
-        <div className="rounded border border-red-300 bg-red-50 p-4 text-sm text-red-800">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
           Import eșuat: {result.error}
         </div>
       )}
 
       {result && result.ok && (
-        <div className="rounded border border-green-300 bg-green-50 p-4 text-sm text-green-800">
+        <div className="rounded-2xl border border-green-200 bg-green-50 p-4 text-sm text-green-800">
           Import reușit: {result.counts.created} create,{" "}
           {result.counts.updated} actualizate, {result.counts.skipped} sărite.{" "}
           <Link href={`/exams/${result.examId}`} className="font-medium underline">

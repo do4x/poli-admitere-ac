@@ -6,6 +6,7 @@ import {
   solveState,
   tagCounts,
   type ProblemFilters,
+  type SolveState,
 } from "@/lib/domain";
 import { examLabel, problemNumberCompare } from "@/lib/format";
 import { FilterBar } from "./FilterBar";
@@ -14,13 +15,31 @@ import { parseFilters } from "./searchFilters";
 
 export const dynamic = "force-dynamic";
 
-const STARE_BADGE: Record<
-  ReturnType<typeof solveState>,
-  { text: string; cls: string }
+// Left spine = subject; card outline + status badge = solve state.
+const SUBJECT_SPINE: Record<string, string> = {
+  MATE: "bg-blue-500",
+  INFO: "bg-violet-500",
+};
+
+const STATUS: Record<
+  SolveState,
+  { border: string; badge: string; label: string }
 > = {
-  singur: { text: "rezolvată singur", cls: "bg-green-100 text-green-800" },
-  doar_ai: { text: "doar cu AI", cls: "bg-amber-100 text-amber-800" },
-  nerezolvata: { text: "nerezolvată", cls: "bg-stone-200 text-stone-600" },
+  nerezolvata: {
+    border: "border-rose-300",
+    badge: "bg-rose-100 text-rose-700",
+    label: "nerezolvată",
+  },
+  doar_ai: {
+    border: "border-orange-300",
+    badge: "bg-orange-100 text-orange-700",
+    label: "doar cu AI",
+  },
+  singur: {
+    border: "border-green-300",
+    badge: "bg-green-100 text-green-700",
+    label: "rezolvată singur",
+  },
 };
 
 export default async function ProblemePage({
@@ -66,19 +85,15 @@ export default async function ProblemePage({
     .filter((p) => matchesFilters(filterable(p), domainFilters))
     .sort(
       (a, b) =>
-        b.exam.year - a.exam.year ||
-        problemNumberCompare(a.number, b.number),
+        b.exam.year - a.exam.year || problemNumberCompare(a.number, b.number),
     );
 
-  // Counts reflect the current scope (departajare-only unless "toate"),
-  // independent of the other active filters, so a tag's size stays legible.
   const scopeSet = problems.filter((p) => (parsed.toate ? true : p.isDepartajare));
   const counts = tagCounts(scopeSet.map((p) => ({ tags: p.tags })));
   const years = [...new Set(problems.map((p) => p.exam.year))].sort(
     (a, b) => b - a,
   );
 
-  // Total problem count per tag across all problems, for taxonomy management.
   const totalCounts = tagCounts(problems.map((p) => ({ tags: p.tags })));
   const managedTags = allTags.map((t) => ({
     ...t,
@@ -86,10 +101,19 @@ export default async function ProblemePage({
   }));
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-baseline justify-between">
-        <h1 className="text-2xl font-bold">Probleme</h1>
-        <span className="text-sm text-stone-500">{visible.length} rezultate</span>
+    <div className="space-y-5">
+      <div className="flex items-end justify-between">
+        <div>
+          <h1 className="font-display text-3xl font-extrabold tracking-tight">
+            Probleme
+          </h1>
+          <p className="mt-1 text-sm text-muted">
+            Filtrează după capitol pentru lucru țintit.
+          </p>
+        </div>
+        <span className="rounded-full border border-line bg-card px-3 py-1 text-sm font-medium text-muted shadow-soft tabular-nums">
+          {visible.length} rezultate
+        </span>
       </div>
 
       <FilterBar
@@ -101,59 +125,60 @@ export default async function ProblemePage({
       />
 
       {visible.length === 0 ? (
-        <p className="rounded border border-stone-300 bg-white p-6 text-center text-sm text-stone-500">
+        <p className="card p-10 text-center text-sm text-muted">
           Nicio problemă nu corespunde filtrelor.
         </p>
       ) : (
-        <ul className="space-y-2">
+        <ul className="space-y-3">
           {visible.map((problem) => {
-            const badge = STARE_BADGE[solveState(problem.solutions)];
+            const status = STATUS[solveState(problem.solutions)];
+            const spine = SUBJECT_SPINE[problem.exam.subject] ?? "bg-stone-400";
             return (
-              <li
-                key={problem.id}
-                className={`rounded border bg-white p-3 ${
-                  problem.isDepartajare
-                    ? "border-l-4 border-amber-500"
-                    : "border-stone-300"
-                }`}
-              >
-                <div className="flex items-start gap-4">
-                  <Link
-                    href={`/problems/${problem.id}`}
-                    className="min-w-0 flex-1"
+              <li key={problem.id}>
+                <Link href={`/problems/${problem.id}`} className="block">
+                  <article
+                    className={`relative overflow-hidden rounded-2xl border-2 bg-card py-4 pl-6 pr-4 shadow-soft transition-all hover:-translate-y-0.5 hover:shadow-lift ${status.border}`}
                   >
-                    <div className="flex items-baseline gap-3">
-                      <span className="shrink-0 font-bold">
-                        {problem.number}
-                      </span>
-                      <span className="truncate text-xs text-stone-500">
-                        {examLabel(problem.exam)}
-                      </span>
-                    </div>
-                    <div className="mt-1 max-h-12 overflow-hidden text-sm text-stone-700">
-                      <Statement latex={problem.latex} />
-                    </div>
-                  </Link>
-                  <div className="flex shrink-0 flex-col items-end gap-1">
                     <span
-                      className={`rounded px-2 py-0.5 text-xs font-semibold ${badge.cls}`}
-                    >
-                      {badge.text}
-                    </span>
-                    {problem.tags.length > 0 && (
-                      <div className="flex flex-wrap justify-end gap-1">
-                        {problem.tags.map((tag) => (
-                          <span
-                            key={tag.name}
-                            className="rounded border border-stone-300 bg-stone-50 px-1.5 py-0.5 text-[10px] font-medium text-stone-600"
-                          >
-                            {tag.name}
+                      className={`absolute inset-y-0 left-0 w-1.5 ${spine}`}
+                      aria-hidden
+                    />
+                    <div className="flex items-start gap-4">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-baseline gap-2.5">
+                          <span className="font-display text-base font-bold">
+                            {problem.number}
                           </span>
-                        ))}
+                          <span className="truncate text-xs text-faint">
+                            {examLabel(problem.exam)}
+                          </span>
+                        </div>
+                        <div className="mt-1.5 max-h-12 overflow-hidden text-sm text-ink/75">
+                          <Statement latex={problem.latex} />
+                        </div>
                       </div>
-                    )}
-                  </div>
-                </div>
+                      <div className="flex shrink-0 flex-col items-end gap-1.5">
+                        <span
+                          className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${status.badge}`}
+                        >
+                          {status.label}
+                        </span>
+                        {problem.tags.length > 0 && (
+                          <div className="flex max-w-[13rem] flex-wrap justify-end gap-1">
+                            {problem.tags.map((tag) => (
+                              <span
+                                key={tag.name}
+                                className="rounded-full border border-line bg-surface px-2 py-0.5 text-[10px] font-medium text-muted"
+                              >
+                                {tag.name}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </article>
+                </Link>
               </li>
             );
           })}

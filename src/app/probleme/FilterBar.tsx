@@ -18,28 +18,33 @@ interface FilterBarProps {
   counts: TagCounts;
 }
 
-const STARE_LABELS: Record<SolveState, string> = {
-  nerezolvata: "nerezolvată",
-  singur: "rezolvată singur",
-  doar_ai: "doar cu AI",
-};
+const STARE: { key: SolveState; label: string; active: string }[] = [
+  { key: "nerezolvata", label: "nerezolvată", active: "bg-rose-600 text-white border-rose-600" },
+  { key: "singur", label: "rezolvată singur", active: "bg-green-600 text-white border-green-600" },
+  { key: "doar_ai", label: "doar cu AI", active: "bg-orange-500 text-white border-orange-500" },
+];
+
+const BRAND_ACTIVE = "bg-brand text-white border-brand";
 
 function Chip({
   href,
   active,
+  activeClass = BRAND_ACTIVE,
   children,
 }: {
   href: string;
   active: boolean;
+  activeClass?: string;
   children: React.ReactNode;
 }) {
   const cls = active
-    ? "border-amber-600 bg-amber-50 text-amber-700"
-    : "border-stone-300 text-stone-600 hover:bg-stone-100";
+    ? activeClass
+    : "border-line bg-card text-muted hover:border-ink/20 hover:text-ink";
   return (
     <Link
       href={href}
-      className={`rounded border px-2 py-0.5 text-xs font-semibold ${cls}`}
+      aria-pressed={active}
+      className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium shadow-soft transition-colors ${cls}`}
     >
       {children}
     </Link>
@@ -55,7 +60,7 @@ function Group({
 }) {
   return (
     <div className="flex flex-wrap items-baseline gap-2">
-      <span className="w-16 shrink-0 text-xs font-semibold uppercase tracking-wide text-stone-400">
+      <span className="w-16 shrink-0 text-[11px] font-semibold uppercase tracking-wide text-faint">
         {label}
       </span>
       <div className="flex flex-wrap gap-1.5">{children}</div>
@@ -67,13 +72,12 @@ export function FilterBar({ current, params, tags, years, counts }: FilterBarPro
   const link = (key: string, value: string) =>
     `/probleme${toggleParam(params, key, value)}`;
 
-  // Which tags to show: those of the active subject, or all when no subject.
   const visibleTags = current.subject
     ? tags.filter((t) => t.subject === current.subject)
     : tags;
 
   return (
-    <div className="space-y-2 rounded border border-stone-300 bg-white p-3">
+    <div className="card space-y-2.5 p-4">
       <Group label="Scop">
         <Chip href={link("toate", "1")} active={!current.toate}>
           Doar departajare
@@ -84,10 +88,18 @@ export function FilterBar({ current, params, tags, years, counts }: FilterBarPro
       </Group>
 
       <Group label="Materie">
-        <Chip href={link("subject", "MATE")} active={current.subject === "MATE"}>
+        <Chip
+          href={link("subject", "MATE")}
+          active={current.subject === "MATE"}
+          activeClass="bg-blue-600 text-white border-blue-600"
+        >
           Matematică
         </Chip>
-        <Chip href={link("subject", "INFO")} active={current.subject === "INFO"}>
+        <Chip
+          href={link("subject", "INFO")}
+          active={current.subject === "INFO"}
+          activeClass="bg-violet-600 text-white border-violet-600"
+        >
           Informatică
         </Chip>
       </Group>
@@ -107,13 +119,14 @@ export function FilterBar({ current, params, tags, years, counts }: FilterBarPro
       )}
 
       <Group label="Stare">
-        {(Object.keys(STARE_LABELS) as SolveState[]).map((stare) => (
+        {STARE.map((s) => (
           <Chip
-            key={stare}
-            href={link("stare", stare)}
-            active={current.stare === stare}
+            key={s.key}
+            href={link("stare", s.key)}
+            active={current.stare === s.key}
+            activeClass={s.active}
           >
-            {STARE_LABELS[stare]}
+            {s.label}
           </Chip>
         ))}
       </Group>
@@ -125,11 +138,15 @@ export function FilterBar({ current, params, tags, years, counts }: FilterBarPro
             href={link("tag", tag.name)}
             active={current.tagName === tag.name}
           >
-            {tag.name} ({counts.byTag[tag.name] ?? 0})
+            {tag.name}
+            <span className="ml-1 text-[10px] opacity-60">
+              {counts.byTag[tag.name] ?? 0}
+            </span>
           </Chip>
         ))}
         <Chip href={link("neclasificat", "1")} active={!!current.neclasificat}>
-          neclasificat ({counts.neclasificat})
+          neclasificat
+          <span className="ml-1 text-[10px] opacity-60">{counts.neclasificat}</span>
         </Chip>
       </Group>
     </div>

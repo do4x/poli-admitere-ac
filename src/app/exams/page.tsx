@@ -6,10 +6,10 @@ export const dynamic = "force-dynamic";
 
 const YEARS = Array.from({ length: 12 }, (_, i) => 2026 - i);
 const COLUMNS = [
-  { kind: "ADMITERE", subject: "MATE", label: "Admitere Mate" },
-  { kind: "ADMITERE", subject: "INFO", label: "Admitere Info" },
-  { kind: "PREADMITERE", subject: "MATE", label: "Pre-admitere Mate" },
-  { kind: "PREADMITERE", subject: "INFO", label: "Pre-admitere Info" },
+  { kind: "ADMITERE", subject: "MATE", label: "Admitere Mate", dot: "bg-blue-500" },
+  { kind: "ADMITERE", subject: "INFO", label: "Admitere Info", dot: "bg-violet-500" },
+  { kind: "PREADMITERE", subject: "MATE", label: "Pre-admitere Mate", dot: "bg-blue-500" },
+  { kind: "PREADMITERE", subject: "INFO", label: "Pre-admitere Info", dot: "bg-violet-500" },
 ] as const;
 
 export default async function ExamsPage() {
@@ -34,30 +34,44 @@ export default async function ExamsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Examene</h1>
-      <div className="overflow-x-auto rounded border border-stone-300 bg-white">
+      <div>
+        <h1 className="font-display text-3xl font-extrabold tracking-tight">
+          Examene
+        </h1>
+        <p className="mt-1 text-sm text-muted">
+          Progresul arată problemele de departajare rezolvate singur / total pe
+          examen.
+        </p>
+      </div>
+      <div className="card overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-stone-300 bg-stone-50 text-left">
-              <th className="px-3 py-2 font-semibold">An</th>
+            <tr className="border-b border-line text-left">
+              <th className="px-4 py-3 font-semibold text-muted">An</th>
               {COLUMNS.map((column) => (
-                <th key={column.label} className="px-3 py-2 font-semibold">
-                  {column.label}
+                <th key={column.label} className="px-4 py-3 font-semibold text-muted">
+                  <span className="flex items-center gap-1.5">
+                    <span className={`h-2 w-2 rounded-full ${column.dot}`} />
+                    {column.label}
+                  </span>
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
             {YEARS.map((year) => (
-              <tr key={year} className="border-b border-stone-200 last:border-0">
-                <td className="px-3 py-2 font-medium">{year}</td>
+              <tr
+                key={year}
+                className="border-b border-line/70 last:border-0 hover:bg-surface/60"
+              >
+                <td className="px-4 py-2.5 font-semibold tabular-nums">{year}</td>
                 {COLUMNS.map((column) => {
                   const cell =
                     byCell.get(`${year}|${column.kind}|${column.subject}`) ?? [];
                   return (
-                    <td key={column.label} className="px-3 py-2 align-top">
+                    <td key={column.label} className="px-4 py-2.5 align-top">
                       {cell.length === 0 ? (
-                        <span className="text-stone-300">—</span>
+                        <span className="text-line">—</span>
                       ) : (
                         <ul className="space-y-1">
                           {cell.map((exam) => {
@@ -69,19 +83,17 @@ export default async function ExamsPage() {
                               <li key={exam.id}>
                                 <Link
                                   href={`/exams/${exam.id}`}
-                                  className="group inline-flex items-baseline gap-2 hover:underline"
+                                  className="inline-flex items-baseline gap-2 hover:underline"
                                 >
                                   <span
-                                    className={
-                                      done
-                                        ? "font-semibold text-green-700"
-                                        : "font-semibold text-stone-900"
-                                    }
+                                    className={`font-semibold tabular-nums ${
+                                      done ? "text-green-600" : "text-ink"
+                                    }`}
                                   >
                                     {progress.done}/{progress.total}
                                   </span>
                                   {exam.session && (
-                                    <span className="text-xs text-stone-500">
+                                    <span className="text-xs text-faint">
                                       {exam.session}
                                     </span>
                                   )}
@@ -99,10 +111,6 @@ export default async function ExamsPage() {
           </tbody>
         </table>
       </div>
-      <p className="text-xs text-stone-500">
-        Progresul arată problemele de departajare rezolvate singur / total pe
-        examen.
-      </p>
     </div>
   );
 }

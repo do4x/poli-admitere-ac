@@ -13,7 +13,8 @@ data/solutions/
 
 # exam source material — keep the vault private (this repo is public):
 # import JSONs carry problem statements; the year folders hold exam PDFs.
-import/
+# Root-anchored: src/lib/import is code and must stay tracked.
+/import/
 /2015/
 /2016/
 /2017/

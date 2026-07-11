@@ -10,6 +10,7 @@
     "test:watch": "vitest",
     "import": "tsx scripts/import.ts",
     "import:tags": "tsx scripts/import-tags.ts",
+    "import:answers": "tsx scripts/import-answers.ts",
     "export:problems": "tsx scripts/export-problems.ts",
     "db:push": "prisma db push",
     "postinstall": "prisma generate"

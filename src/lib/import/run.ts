@@ -31,6 +31,7 @@ async function findExam(db: Db, exam: ImportFile["exam"]) {
           number: true,
           latex: true,
           isDepartajare: true,
+          correctAnswer: true,
           tags: { select: { name: true } },
         },
       },
@@ -92,6 +93,7 @@ export async function runImport(
             number: problem.number,
             latex: problem.latex,
             isDepartajare: problem.isDepartajare,
+            correctAnswer: problem.answerChange?.to ?? null,
           },
           select: { id: true },
         });
@@ -106,7 +108,14 @@ export async function runImport(
           where: {
             examId_number: { examId: examRow.id, number: problem.number },
           },
-          data: { latex: problem.latex, isDepartajare: problem.isDepartajare },
+          data: {
+            latex: problem.latex,
+            isDepartajare: problem.isDepartajare,
+            // Absent answer in the file leaves the stored key untouched.
+            ...(problem.answerChange
+              ? { correctAnswer: problem.answerChange.to }
+              : {}),
+          },
         });
         if (problem.tagChange) {
           await tx.problem.update({

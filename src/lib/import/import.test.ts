@@ -107,6 +107,23 @@ describe("parseImportFile", () => {
     if (result.ok) expect(result.file.problems[0]!.types).toBeUndefined();
   });
 
+  it("accepts an optional answer and rejects letters outside a-f", () => {
+    const good = {
+      ...validFile,
+      problems: [{ number: "1", isDepartajare: false, latex: "$x$", answer: "c" }],
+    };
+    const result = parseImportFile(JSON.stringify(good));
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.file.problems[0]!.answer).toBe("c");
+    const bad = {
+      ...validFile,
+      problems: [{ number: "1", isDepartajare: false, latex: "$x$", answer: "g" }],
+    };
+    expect(parseImportFile(JSON.stringify(bad)).ok).toBe(false);
+    const legacy = parseImportFile(JSON.stringify(validFile));
+    if (legacy.ok) expect(legacy.file.problems[0]!.answer).toBeUndefined();
+  });
+
   it("rejects more than 3 types or empty type strings", () => {
     const tooMany = {
       ...validFile,
@@ -224,6 +241,46 @@ describe("planImport", () => {
     );
     expect(plan.problems[0]!.action).toBe("create");
     expect(plan.problems[0]!.tagChange).toEqual({ from: [], to: ["grafuri"] });
+  });
+
+  it("plans an answer change (as update) when the key differs, skip when equal", () => {
+    const existing = [
+      { number: "1", latex: "same", isDepartajare: false, correctAnswer: "b" },
+    ];
+    const changed = planImport(
+      existing,
+      [{ number: "1", latex: "same", isDepartajare: false, answer: "c" }],
+      true,
+    );
+    expect(changed.problems[0]!.action).toBe("update");
+    expect(changed.problems[0]!.answerChange).toEqual({ from: "b", to: "c" });
+
+    const identical = planImport(
+      existing,
+      [{ number: "1", latex: "same", isDepartajare: false, answer: "b" }],
+      true,
+    );
+    expect(identical.problems[0]!.action).toBe("skip");
+    expect(identical.problems[0]!.answerChange).toBeUndefined();
+  });
+
+  it("leaves the stored key untouched when the file has no answer", () => {
+    const plan = planImport(
+      [{ number: "1", latex: "old", isDepartajare: false, correctAnswer: "b" }],
+      [{ number: "1", latex: "new", isDepartajare: false }],
+      true,
+    );
+    expect(plan.problems[0]!.action).toBe("update");
+    expect(plan.problems[0]!.answerChange).toBeUndefined();
+  });
+
+  it("carries the answer on create", () => {
+    const plan = planImport(
+      [],
+      [{ number: "1", latex: "a", isDepartajare: true, answer: "f" }],
+      false,
+    );
+    expect(plan.problems[0]!.answerChange).toEqual({ from: null, to: "f" });
   });
 });
 

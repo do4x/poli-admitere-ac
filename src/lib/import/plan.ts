@@ -8,15 +8,18 @@ export interface ProblemFields {
   isDepartajare: boolean;
 }
 
-/** An existing DB problem, optionally carrying its current tag names. */
+/** An existing DB problem, optionally carrying its current tags and answer key. */
 export interface ExistingProblem extends ProblemFields {
   tags?: readonly { name: string }[];
+  correctAnswer?: string | null;
 }
 
-/** An incoming problem from an import file, optionally specifying tag types. */
+/** An incoming problem from an import file, optionally specifying tags/answer. */
 export interface IncomingProblem extends ProblemFields {
   /** Absent ⇒ tags untouched; present ⇒ tag set replaced with exactly these. */
   types?: readonly string[];
+  /** Absent ⇒ answer key untouched; present ⇒ replaced. */
+  answer?: string;
 }
 
 export interface PlannedProblem extends ProblemFields {
@@ -32,6 +35,8 @@ export interface PlannedProblem extends ProblemFields {
    * differs from the current one. Carries the tag names to write.
    */
   tagChange?: { from: string[]; to: string[] };
+  /** Present only when the file specified `answer` AND it differs. */
+  answerChange?: { from: string | null; to: string };
 }
 
 export interface ImportPlan {
@@ -57,6 +62,8 @@ export function planImport(
     const tagsSpecified = p.types !== undefined;
     const desiredTags = p.types ? [...p.types] : [];
     const tagsDiffer = tagsSpecified && !sameSet(currentTags, desiredTags);
+    const currentAnswer = current?.correctAnswer ?? null;
+    const answerDiffers = p.answer !== undefined && p.answer !== currentAnswer;
 
     let action: ProblemAction;
     if (!current) {
@@ -64,7 +71,8 @@ export function planImport(
     } else if (
       current.latex === p.latex &&
       current.isDepartajare === p.isDepartajare &&
-      !tagsDiffer
+      !tagsDiffer &&
+      !answerDiffers
     ) {
       action = "skip";
     } else {
@@ -86,6 +94,9 @@ export function planImport(
     // Write tags on create (when any are specified) or whenever they differ.
     if (tagsSpecified && (tagsDiffer || (!current && desiredTags.length > 0))) {
       planned.tagChange = { from: currentTags, to: desiredTags };
+    }
+    if (p.answer !== undefined && (answerDiffers || !current)) {
+      planned.answerChange = { from: currentAnswer, to: p.answer };
     }
     return planned;
   });

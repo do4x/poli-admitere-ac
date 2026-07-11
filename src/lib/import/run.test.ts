@@ -163,4 +163,31 @@ describe("runImport with optional types", () => {
     });
     expect(p1.tags.map((t) => t.name).sort()).toEqual(["dp", "grafuri"]);
   });
+
+  it("round-trips the optional answer key and preserves it on answer-less updates", async () => {
+    const withAnswer: ImportFile = {
+      exam: { year: 2019, kind: "PREADMITERE", subject: "MATE", session: null },
+      problems: [{ number: "1", isDepartajare: true, latex: "$1+1$", answer: "d" }],
+    };
+    await runImport(db, withAnswer);
+    let p = await db.problem.findFirstOrThrow({
+      where: { number: "1", exam: { year: 2019 } },
+    });
+    expect(p.correctAnswer).toBe("d");
+
+    // Identical re-import is a no-op.
+    const again = await runImport(db, withAnswer);
+    expect(again.counts).toEqual({ created: 0, updated: 0, skipped: 1 });
+
+    // Answer-less latex update keeps the stored key.
+    const noAnswer: ImportFile = {
+      exam: { year: 2019, kind: "PREADMITERE", subject: "MATE", session: null },
+      problems: [{ number: "1", isDepartajare: true, latex: "$1+2$" }],
+    };
+    await runImport(db, noAnswer);
+    p = await db.problem.findFirstOrThrow({
+      where: { number: "1", exam: { year: 2019 } },
+    });
+    expect(p.correctAnswer).toBe("d");
+  });
 });

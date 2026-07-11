@@ -5,6 +5,8 @@ export const subjectSchema = z.enum(["MATE", "INFO"]);
 
 // Size caps: the server-action body limit is 50 MB, so without per-field
 // bounds any LAN peer could bloat the DB / stall the KaTeX renderer.
+export const answerChoiceSchema = z.enum(["a", "b", "c", "d", "e", "f"]);
+
 export const importProblemSchema = z.object({
   number: z.string().min(1).max(32),
   isDepartajare: z.boolean().default(false),
@@ -12,6 +14,8 @@ export const importProblemSchema = z.object({
   // Optional topic tags. Absent ⇒ the problem's tags are left untouched on
   // import; present ⇒ the tag set is replaced with exactly these.
   types: z.array(z.string().trim().min(1).max(60)).max(3).optional(),
+  // Optional official grila key. Absent ⇒ untouched; present ⇒ replaced.
+  answer: answerChoiceSchema.optional(),
 });
 
 export const importFileSchema = z

@@ -78,6 +78,21 @@ describe("matchesFilters", () => {
     expect(matchesFilters(problem(), { neclasificat: true })).toBe(false);
   });
 
+  it("stare 'grila' matches via attempts, and attempts are optional", () => {
+    const checked = problem({ attempts: [{ kind: "CHOICE", correct: true }] });
+    expect(matchesFilters(checked, { stare: "grila" })).toBe(true);
+    expect(matchesFilters(problem(), { stare: "grila" })).toBe(false);
+    // a revealed problem never reaches 'grila'
+    const tainted = problem({
+      attempts: [
+        { kind: "REVEAL", correct: null },
+        { kind: "CHOICE", correct: true },
+      ],
+    });
+    expect(matchesFilters(tainted, { stare: "grila" })).toBe(false);
+    expect(matchesFilters(tainted, { stare: "nerezolvata" })).toBe(true);
+  });
+
   it("departajareOnly excludes non-departajare problems regardless of other filters", () => {
     const regular = problem({ isDepartajare: false });
     expect(matchesFilters(regular, { departajareOnly: true })).toBe(false);

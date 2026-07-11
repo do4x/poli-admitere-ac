@@ -17,7 +17,7 @@ export {
   type DueSolutionInput,
   type DueItem,
 } from "./dueQueue";
-export { solveState, type SolveState } from "./solveState";
+export { solveState, type AttemptLike, type SolveState } from "./solveState";
 export {
   tagCounts,
   matchesFilters,

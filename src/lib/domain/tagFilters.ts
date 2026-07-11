@@ -1,4 +1,4 @@
-import { solveState, type SolveState } from "./solveState";
+import { solveState, type AttemptLike, type SolveState } from "./solveState";
 
 /** A problem reduced to just the fields filtering depends on. */
 export interface FilterableProblem {
@@ -7,6 +7,8 @@ export interface FilterableProblem {
   year: number;
   tags: readonly { name: string }[];
   solutions: readonly { aiAssisted: boolean }[];
+  /** Chronological answer attempts; absent = none. */
+  attempts?: readonly AttemptLike[];
 }
 
 export interface ProblemFilters {
@@ -61,7 +63,10 @@ export function matchesFilters(
   ) {
     return false;
   }
-  if (filters.stare && solveState(problem.solutions) !== filters.stare) {
+  if (
+    filters.stare &&
+    solveState(problem.solutions, problem.attempts ?? []) !== filters.stare
+  ) {
     return false;
   }
   return true;

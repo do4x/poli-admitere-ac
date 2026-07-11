@@ -23,3 +23,36 @@ describe("solveState", () => {
     expect(solveState([aiAssisted, aiAssisted])).toBe("doar_ai");
   });
 });
+
+const correct = { kind: "CHOICE", correct: true } as const;
+const wrong = { kind: "CHOICE", correct: false } as const;
+const reveal = { kind: "REVEAL", correct: null } as const;
+
+describe("solveState — grila ladder", () => {
+  it("is 'grila' after a correct choice with no solutions", () => {
+    expect(solveState([], [correct])).toBe("grila");
+    expect(solveState([], [wrong, wrong, correct])).toBe("grila");
+  });
+
+  it("stays 'nerezolvata' on wrong attempts only", () => {
+    expect(solveState([], [wrong, wrong])).toBe("nerezolvata");
+  });
+
+  it("a reveal taints later correct attempts", () => {
+    expect(solveState([], [reveal, correct])).toBe("nerezolvata");
+    expect(solveState([], [wrong, reveal, correct])).toBe("nerezolvata");
+  });
+
+  it("a correct attempt BEFORE the reveal still counts", () => {
+    expect(solveState([], [correct, reveal])).toBe("grila");
+  });
+
+  it("solutions outrank grila: any solution wins over attempts", () => {
+    expect(solveState([aiAssisted], [correct])).toBe("doar_ai");
+    expect(solveState([independent], [reveal, correct])).toBe("singur");
+  });
+
+  it("attempts alone never produce 'singur' (commitment device intact)", () => {
+    expect(solveState([], [correct, correct, correct])).not.toBe("singur");
+  });
+});

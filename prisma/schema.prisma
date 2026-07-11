@@ -29,17 +29,39 @@ model Exam {
 }
 
 model Problem {
-  id            String     @id @default(cuid())
+  id            String          @id @default(cuid())
   examId        String
-  exam          Exam       @relation(fields: [examId], references: [id])
+  exam          Exam            @relation(fields: [examId], references: [id])
   number        String
   latex         String
-  isDepartajare Boolean    @default(false)
+  isDepartajare Boolean         @default(false)
+  // Official grila key ("a".."f"), admin-imported. Must NEVER reach the
+  // client: every page query that returns problems adds
+  // `omit: { correctAnswer: true }`; comparison happens in server actions only.
+  correctAnswer String?
   solutions     Solution[]
+  attempts      AnswerAttempt[]
   tags          Tag[]
-  createdAt     DateTime   @default(now())
+  createdAt     DateTime        @default(now())
 
   @@unique([examId, number])
+}
+
+enum AttemptKind {
+  CHOICE
+  REVEAL
+}
+
+model AnswerAttempt {
+  id        String      @id @default(cuid())
+  problemId String
+  problem   Problem     @relation(fields: [problemId], references: [id])
+  kind      AttemptKind
+  choice    String? // "a".."f" when kind = CHOICE
+  correct   Boolean? // server-computed at submit time
+  createdAt DateTime    @default(now())
+
+  @@index([problemId, createdAt])
 }
 
 model Tag {

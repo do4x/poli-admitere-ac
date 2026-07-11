@@ -26,6 +26,12 @@ export default function RootLayout({
               Examene
             </Link>
             <Link
+              href="/probleme"
+              className="text-sm text-stone-600 hover:text-stone-900"
+            >
+              Probleme
+            </Link>
+            <Link
               href="/import"
               className="text-sm text-stone-600 hover:text-stone-900"
             >

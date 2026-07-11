@@ -70,3 +70,116 @@ export async function uploadSolution(
   revalidatePath(`/problems/${problem.id}`);
   return { error: null, uploadedAt: submittedAt.getTime() };
 }
+
+const MAX_TAGS = 3;
+const TAG_NAME_MAX = 60;
+
+export interface TagActionState {
+  error: string | null;
+}
+
+function revalidateProblem(problemId: string): void {
+  revalidatePath(`/problems/${problemId}`);
+  revalidatePath("/probleme");
+}
+
+/** Attach an existing tag to a problem (from the dropdown). */
+export async function addTagAction(
+  problemId: string,
+  _previous: TagActionState,
+  formData: FormData,
+): Promise<TagActionState> {
+  const tagId = String(formData.get("tagId") ?? "");
+  if (!tagId) return { error: "Alege un tip." };
+
+  const problem = await prisma.problem.findUnique({
+    where: { id: problemId },
+    select: {
+      exam: { select: { subject: true } },
+      tags: { select: { id: true } },
+    },
+  });
+  if (!problem) return { error: "Problema nu există." };
+
+  const tag = await prisma.tag.findUnique({
+    where: { id: tagId },
+    select: { id: true, subject: true },
+  });
+  if (!tag) return { error: "Tipul nu există." };
+  if (tag.subject !== problem.exam.subject) {
+    return { error: "Tipul nu se potrivește cu materia problemei." };
+  }
+  if (problem.tags.some((t) => t.id === tag.id)) {
+    return { error: null }; // already attached — nothing to do
+  }
+  if (problem.tags.length >= MAX_TAGS) {
+    return { error: `Maxim ${MAX_TAGS} tipuri per problemă.` };
+  }
+
+  await prisma.problem.update({
+    where: { id: problemId },
+    data: { tags: { connect: { id: tag.id } } },
+  });
+  revalidateProblem(problemId);
+  return { error: null };
+}
+
+/** Detach a tag from a problem. Never deletes the tag itself. */
+export async function removeTagFromProblem(
+  problemId: string,
+  tagId: string,
+): Promise<void> {
+  const problem = await prisma.problem.findUnique({
+    where: { id: problemId },
+    select: { id: true },
+  });
+  if (!problem) return;
+
+  await prisma.problem.update({
+    where: { id: problemId },
+    data: { tags: { disconnect: { id: tagId } } },
+  });
+  revalidateProblem(problemId);
+}
+
+/** Create a new tag (subject = the problem's subject) and attach it. */
+export async function createTagAction(
+  problemId: string,
+  _previous: TagActionState,
+  formData: FormData,
+): Promise<TagActionState> {
+  const name = String(formData.get("name") ?? "").trim();
+  if (name.length < 1 || name.length > TAG_NAME_MAX) {
+    return { error: `Numele tipului trebuie să aibă 1–${TAG_NAME_MAX} caractere.` };
+  }
+
+  const problem = await prisma.problem.findUnique({
+    where: { id: problemId },
+    select: {
+      exam: { select: { subject: true } },
+      tags: { select: { id: true } },
+    },
+  });
+  if (!problem) return { error: "Problema nu există." };
+  if (problem.tags.length >= MAX_TAGS) {
+    return { error: `Maxim ${MAX_TAGS} tipuri per problemă.` };
+  }
+
+  const subject = problem.exam.subject;
+  const existing = await prisma.tag.findUnique({
+    where: { subject_name: { subject, name } },
+    select: { id: true },
+  });
+  if (existing) {
+    return {
+      error: "Există deja un tip cu acest nume — alege-l din listă.",
+    };
+  }
+
+  await prisma.problem.update({
+    where: { id: problemId },
+    data: { tags: { create: { subject, name } } },
+  });
+  revalidateProblem(problemId);
+  return { error: null };
+}

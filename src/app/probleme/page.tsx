@@ -9,6 +9,7 @@ import {
 } from "@/lib/domain";
 import { examLabel, problemNumberCompare } from "@/lib/format";
 import { FilterBar } from "./FilterBar";
+import { TaxonomyManager } from "./TaxonomyManager";
 import { parseFilters } from "./searchFilters";
 
 export const dynamic = "force-dynamic";
@@ -39,7 +40,7 @@ export default async function ProblemePage({
       },
     }),
     prisma.tag.findMany({
-      select: { name: true, subject: true },
+      select: { id: true, name: true, subject: true },
       orderBy: [{ subject: "asc" }, { name: "asc" }],
     }),
   ]);
@@ -76,6 +77,13 @@ export default async function ProblemePage({
   const years = [...new Set(problems.map((p) => p.exam.year))].sort(
     (a, b) => b - a,
   );
+
+  // Total problem count per tag across all problems, for taxonomy management.
+  const totalCounts = tagCounts(problems.map((p) => ({ tags: p.tags })));
+  const managedTags = allTags.map((t) => ({
+    ...t,
+    count: totalCounts.byTag[t.name] ?? 0,
+  }));
 
   return (
     <div className="space-y-4">
@@ -151,6 +159,8 @@ export default async function ProblemePage({
           })}
         </ul>
       )}
+
+      <TaxonomyManager tags={managedTags} />
     </div>
   );
 }

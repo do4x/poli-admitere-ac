@@ -4,6 +4,7 @@ import { Statement } from "@/components/Statement";
 import { prisma } from "@/lib/db";
 import { hasIndependentSolution } from "@/lib/domain";
 import { examLabel, formatDateTime } from "@/lib/format";
+import { TagEditor } from "./TagEditor";
 import { UploadForm } from "./UploadForm";
 
 export default async function ProblemPage({
@@ -16,10 +17,19 @@ export default async function ProblemPage({
     where: { id },
     include: {
       exam: true,
+      tags: { select: { id: true, name: true }, orderBy: { name: "asc" } },
       solutions: { orderBy: { submittedAt: "asc" } },
     },
   });
   if (!problem) notFound();
+
+  const subjectTags = await prisma.tag.findMany({
+    where: { subject: problem.exam.subject },
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
+  });
+  const attachedIds = new Set(problem.tags.map((t) => t.id));
+  const availableTags = subjectTags.filter((t) => !attachedIds.has(t.id));
 
   const done = hasIndependentSolution(problem);
 
@@ -49,6 +59,14 @@ export default async function ProblemPage({
             </span>
           )}
         </h1>
+      </div>
+
+      <div className="rounded border border-stone-200 bg-stone-50 p-3">
+        <TagEditor
+          problemId={problem.id}
+          tags={problem.tags}
+          available={availableTags}
+        />
       </div>
 
       <section className="rounded border border-stone-300 bg-white p-4">

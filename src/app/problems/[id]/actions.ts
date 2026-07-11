@@ -74,6 +74,79 @@ export async function uploadSolution(
 const MAX_TAGS = 3;
 const TAG_NAME_MAX = 60;
 
+const CHOICES = ["a", "b", "c", "d", "e", "f"] as const;
+const ATTEMPTS_PER_MINUTE = 5;
+
+export interface GrilaState {
+  error: string | null;
+  /** Set after a CHOICE submit: was it right? */
+  correct?: boolean;
+}
+
+/**
+ * Check a grila choice against the official key. The key is read and
+ * compared HERE only — it must never travel to the client.
+ */
+export async function submitAnswerAction(
+  problemId: string,
+  _previous: GrilaState,
+  formData: FormData,
+): Promise<GrilaState> {
+  const choice = String(formData.get("choice") ?? "");
+  if (!(CHOICES as readonly string[]).includes(choice)) {
+    return { error: "Alege o variantă (a–f)." };
+  }
+
+  const problem = await prisma.problem.findUnique({
+    where: { id: problemId },
+    select: { correctAnswer: true },
+  });
+  if (!problem) return { error: "Problema nu există." };
+  if (problem.correctAnswer === null) {
+    return { error: "Răspunsul oficial nu este disponibil pentru această problemă." };
+  }
+
+  const recent = await prisma.answerAttempt.count({
+    where: {
+      problemId,
+      kind: "CHOICE",
+      createdAt: { gte: new Date(Date.now() - 60_000) },
+    },
+  });
+  if (recent >= ATTEMPTS_PER_MINUTE) {
+    return { error: "Prea multe încercări — așteaptă un minut." };
+  }
+
+  const correct = choice === problem.correctAnswer;
+  await prisma.answerAttempt.create({
+    data: { problemId, kind: "CHOICE", choice, correct },
+  });
+
+  revalidateProblem(problemId);
+  revalidatePath("/");
+  return { error: null, correct };
+}
+
+/**
+ * Reveal the official key. Recorded as a REVEAL attempt, which permanently
+ * blocks the "verificată pe grilă" state for this problem (you can no longer
+ * self-verify with a known answer). The page re-render shows the key.
+ */
+export async function revealAnswerAction(problemId: string): Promise<void> {
+  const problem = await prisma.problem.findUnique({
+    where: { id: problemId },
+    select: { correctAnswer: true },
+  });
+  if (!problem || problem.correctAnswer === null) return;
+
+  await prisma.answerAttempt.create({
+    data: { problemId, kind: "REVEAL" },
+  });
+
+  revalidateProblem(problemId);
+  revalidatePath("/");
+}
+
 export interface TagActionState {
   error: string | null;
 }

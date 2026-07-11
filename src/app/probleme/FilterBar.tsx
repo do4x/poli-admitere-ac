@@ -20,6 +20,7 @@ interface FilterBarProps {
 
 const STARE: { key: SolveState; label: string; active: string }[] = [
   { key: "nerezolvata", label: "nerezolvată", active: "bg-rose-600 text-white border-rose-600" },
+  { key: "grila", label: "verificată pe grilă", active: "bg-teal-600 text-white border-teal-600" },
   { key: "singur", label: "rezolvată singur", active: "bg-green-600 text-white border-green-600" },
   { key: "doar_ai", label: "doar cu AI", active: "bg-orange-500 text-white border-orange-500" },
 ];

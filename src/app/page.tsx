@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
-import { dueSolutions, examProgress, remainingCount } from "@/lib/domain";
+import {
+  dueSolutions,
+  examProgress,
+  remainingCount,
+  solveState,
+} from "@/lib/domain";
 import { examLabel, formatDateTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +14,15 @@ export default async function DashboardPage() {
   const now = new Date();
   const [problems, recentSolutions] = await Promise.all([
     prisma.problem.findMany({
-      include: { exam: true, solutions: true },
+      omit: { correctAnswer: true }, // the key never leaves the server actions
+      include: {
+        exam: true,
+        solutions: true,
+        attempts: {
+          select: { kind: true, correct: true },
+          orderBy: { createdAt: "asc" },
+        },
+      },
     }),
     prisma.solution.findMany({
       orderBy: { submittedAt: "desc" },
@@ -21,6 +34,10 @@ export default async function DashboardPage() {
   const remaining = remainingCount(problems);
   const totalDepartajare = problems.filter((p) => p.isDepartajare).length;
   const doneDepartajare = totalDepartajare - remaining;
+  const grilaVerified = problems.filter(
+    (p) =>
+      p.isDepartajare && solveState(p.solutions, p.attempts) === "grila",
+  ).length;
   const percentDone =
     totalDepartajare === 0
       ? 0
@@ -113,6 +130,11 @@ export default async function DashboardPage() {
                 style={{ width: `${percentDone}%` }}
               />
             </div>
+            {grilaVerified > 0 && (
+              <p className="mt-2 text-xs text-teal-700">
+                + {grilaVerified} verificate pe grilă, fără rezolvare trimisă
+              </p>
+            )}
           </div>
         </div>
       </section>

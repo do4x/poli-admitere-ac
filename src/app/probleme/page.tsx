@@ -30,6 +30,11 @@ const STATUS: Record<
     badge: "bg-rose-100 text-rose-700",
     label: "nerezolvată",
   },
+  grila: {
+    border: "border-teal-300",
+    badge: "bg-teal-100 text-teal-700",
+    label: "verificată pe grilă",
+  },
   doar_ai: {
     border: "border-orange-300",
     badge: "bg-orange-100 text-orange-700",
@@ -52,10 +57,15 @@ export default async function ProblemePage({
 
   const [problems, allTags] = await Promise.all([
     prisma.problem.findMany({
+      omit: { correctAnswer: true }, // the key never leaves the server actions
       include: {
         exam: true,
         tags: { select: { name: true } },
         solutions: { select: { aiAssisted: true } },
+        attempts: {
+          select: { kind: true, correct: true },
+          orderBy: { createdAt: "asc" },
+        },
       },
     }),
     prisma.tag.findMany({
@@ -79,6 +89,7 @@ export default async function ProblemePage({
     year: p.exam.year,
     tags: p.tags,
     solutions: p.solutions,
+    attempts: p.attempts,
   });
 
   const visible = problems
@@ -131,7 +142,7 @@ export default async function ProblemePage({
       ) : (
         <ul className="space-y-3">
           {visible.map((problem) => {
-            const status = STATUS[solveState(problem.solutions)];
+            const status = STATUS[solveState(problem.solutions, problem.attempts)];
             const spine = SUBJECT_SPINE[problem.exam.subject] ?? "bg-stone-400";
             return (
               <li key={problem.id}>

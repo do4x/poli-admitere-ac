@@ -4,11 +4,13 @@ import { Statement } from "@/components/Statement";
 import { prisma } from "@/lib/db";
 import { solveState, type SolveState } from "@/lib/domain";
 import { examLabel, formatDateTime } from "@/lib/format";
+import { GrilaCheck } from "./GrilaCheck";
 import { TagEditor } from "./TagEditor";
 import { UploadForm } from "./UploadForm";
 
 const STATUS: Record<SolveState, { badge: string; label: string }> = {
   nerezolvata: { badge: "bg-rose-100 text-rose-700", label: "nerezolvată" },
+  grila: { badge: "bg-teal-100 text-teal-700", label: "verificată pe grilă" },
   doar_ai: { badge: "bg-orange-100 text-orange-700", label: "doar cu AI" },
   singur: { badge: "bg-green-100 text-green-700", label: "rezolvată singur" },
 };
@@ -26,10 +28,15 @@ export default async function ProblemPage({
   const { id } = await params;
   const problem = await prisma.problem.findUnique({
     where: { id },
+    omit: { correctAnswer: true }, // the key never leaves the server actions
     include: {
       exam: true,
       tags: { select: { id: true, name: true }, orderBy: { name: "asc" } },
       solutions: { orderBy: { submittedAt: "asc" } },
+      attempts: {
+        select: { id: true, kind: true, choice: true, correct: true },
+        orderBy: { createdAt: "asc" },
+      },
     },
   });
   if (!problem) notFound();
@@ -42,8 +49,21 @@ export default async function ProblemPage({
   const attachedIds = new Set(problem.tags.map((t) => t.id));
   const availableTags = subjectTags.filter((t) => !attachedIds.has(t.id));
 
-  const status = STATUS[solveState(problem.solutions)];
+  const state = solveState(problem.solutions, problem.attempts);
+  const status = STATUS[state];
   const subject = SUBJECT[problem.exam.subject];
+
+  // Grila data: the key is fetched separately and stays server-side; it is
+  // passed to the client ONLY after the user explicitly revealed it.
+  const keyRow = await prisma.problem.findUnique({
+    where: { id },
+    select: { correctAnswer: true },
+  });
+  const hasKey = keyRow?.correctAnswer != null;
+  const revealed = problem.attempts.some((a) => a.kind === "REVEAL");
+  const grilaHistory = problem.attempts
+    .filter((a) => a.kind === "CHOICE" && a.choice !== null)
+    .map((a) => ({ id: a.id, choice: a.choice as string, correct: a.correct === true }));
 
   return (
     <div className="space-y-5">
@@ -89,6 +109,15 @@ export default async function ProblemPage({
         <Statement latex={problem.latex} />
       </section>
 
+      {hasKey && (
+        <GrilaCheck
+          problemId={problem.id}
+          verified={state === "grila"}
+          history={grilaHistory}
+          revealedAnswer={revealed ? (keyRow?.correctAnswer ?? null) : null}
+        />
+      )}
+
       <section className="space-y-4">
         <h2 className="text-sm font-semibold text-ink">
           Soluții ({problem.solutions.length})
@@ -97,7 +126,7 @@ export default async function ProblemPage({
           <p className="text-sm text-muted">Nicio soluție încărcată încă.</p>
         )}
         {problem.solutions.map((solution) => {
-          const done = solveState(problem.solutions) === "singur";
+          const done = state === "singur";
           return (
             <article key={solution.id} className="card p-4">
               <header className="mb-3 flex flex-wrap items-center gap-3 text-sm">

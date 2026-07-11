@@ -14,7 +14,7 @@ export interface PageFilters {
   toate?: boolean;
 }
 
-const STARI: readonly SolveState[] = ["nerezolvata", "singur", "doar_ai"];
+const STARI: readonly SolveState[] = ["nerezolvata", "grila", "singur", "doar_ai"];
 
 function first(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];

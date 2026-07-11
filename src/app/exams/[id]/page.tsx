@@ -18,6 +18,11 @@ const STATUS: Record<SolveState, { border: string; badge: string; label: string 
     badge: "bg-rose-100 text-rose-700",
     label: "nerezolvată",
   },
+  grila: {
+    border: "border-teal-300",
+    badge: "bg-teal-100 text-teal-700",
+    label: "verificată pe grilă",
+  },
   doar_ai: {
     border: "border-orange-300",
     badge: "bg-orange-100 text-orange-700",
@@ -40,7 +45,14 @@ export default async function ExamPage({
     where: { id },
     include: {
       problems: {
-        include: { solutions: { select: { aiAssisted: true } } },
+        omit: { correctAnswer: true }, // the key never leaves the server actions
+        include: {
+          solutions: { select: { aiAssisted: true } },
+          attempts: {
+            select: { kind: true, correct: true },
+            orderBy: { createdAt: "asc" },
+          },
+        },
       },
     },
   });
@@ -74,7 +86,7 @@ export default async function ExamPage({
 
       <ul className="space-y-3">
         {problems.map((problem) => {
-          const status = STATUS[solveState(problem.solutions)];
+          const status = STATUS[solveState(problem.solutions, problem.attempts)];
           return (
             <li
               key={problem.id}

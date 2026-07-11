@@ -38,6 +38,10 @@ describe("parseFilters", () => {
     ).toEqual({});
   });
 
+  it("accepts the grila state", () => {
+    expect(parseFilters({ stare: "grila" })).toEqual({ stare: "grila" });
+  });
+
   it("rejects years outside 2015–2026", () => {
     expect(parseFilters({ an: "1999" })).toEqual({});
     expect(parseFilters({ an: "2026" })).toEqual({ year: 2026 });

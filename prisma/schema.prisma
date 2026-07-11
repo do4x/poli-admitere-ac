@@ -36,9 +36,20 @@ model Problem {
   latex         String
   isDepartajare Boolean    @default(false)
   solutions     Solution[]
+  tags          Tag[]
   createdAt     DateTime   @default(now())
 
   @@unique([examId, number])
+}
+
+model Tag {
+  id        String    @id @default(cuid())
+  name      String
+  subject   Subject
+  problems  Problem[]
+  createdAt DateTime  @default(now())
+
+  @@unique([subject, name])
 }
 
 model Solution {

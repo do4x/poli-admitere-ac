@@ -9,6 +9,9 @@ export const importProblemSchema = z.object({
   number: z.string().min(1).max(32),
   isDepartajare: z.boolean().default(false),
   latex: z.string().min(1).max(50_000),
+  // Optional topic tags. Absent ⇒ the problem's tags are left untouched on
+  // import; present ⇒ the tag set is replaced with exactly these.
+  types: z.array(z.string().trim().min(1).max(60)).max(3).optional(),
 });
 
 export const importFileSchema = z

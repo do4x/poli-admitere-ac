@@ -115,3 +115,52 @@ describe("planAgainstDb", () => {
     expect(await db.exam.count({ where: { year: 2023 } })).toBe(0);
   });
 });
+
+describe("runImport with optional types", () => {
+  function taggedFile(): ImportFile {
+    return {
+      exam: { year: 2020, kind: "ADMITERE", subject: "INFO", session: null },
+      problems: [
+        { number: "1", isDepartajare: true, latex: "Cod C++", types: ["grafuri", "dp"] },
+        { number: "2", isDepartajare: false, latex: "Ce afișează?" }, // no types
+      ],
+    };
+  }
+
+  it("creates tags and attaches them on first import", async () => {
+    const result = await runImport(db, taggedFile());
+    expect(result.counts.created).toBe(2);
+    const p1 = await db.problem.findFirstOrThrow({
+      where: { number: "1", exam: { year: 2020 } },
+      include: { tags: true },
+    });
+    expect(p1.tags.map((t) => t.name).sort()).toEqual(["dp", "grafuri"]);
+    expect(p1.tags.every((t) => t.subject === "INFO")).toBe(true);
+    const p2 = await db.problem.findFirstOrThrow({
+      where: { number: "2", exam: { year: 2020 } },
+      include: { tags: true },
+    });
+    expect(p2.tags).toHaveLength(0);
+  });
+
+  it("re-importing the identical file is a complete no-op", async () => {
+    const result = await runImport(db, taggedFile());
+    expect(result.counts).toEqual({ created: 0, updated: 0, skipped: 2 });
+  });
+
+  it("a types-less re-import never disturbs existing tags", async () => {
+    const noTypes: ImportFile = {
+      exam: { year: 2020, kind: "ADMITERE", subject: "INFO", session: null },
+      problems: [
+        { number: "1", isDepartajare: true, latex: "Cod C++ v2" }, // latex changed, no types
+      ],
+    };
+    const result = await runImport(db, noTypes);
+    expect(result.counts.updated).toBe(1);
+    const p1 = await db.problem.findFirstOrThrow({
+      where: { number: "1", exam: { year: 2020 } },
+      include: { tags: true },
+    });
+    expect(p1.tags.map((t) => t.name).sort()).toEqual(["dp", "grafuri"]);
+  });
+});

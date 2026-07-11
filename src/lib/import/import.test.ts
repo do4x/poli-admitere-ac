@@ -80,6 +80,49 @@ describe("parseImportFile", () => {
     };
     expect(parseImportFile(JSON.stringify(bad)).ok).toBe(false);
   });
+
+  it("accepts an optional types array on a problem", () => {
+    const file = {
+      ...validFile,
+      problems: [
+        {
+          number: "1",
+          isDepartajare: false,
+          latex: "$x$",
+          types: ["integrale", "sisteme"],
+        },
+      ],
+    };
+    const result = parseImportFile(JSON.stringify(file));
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.file.problems[0]!.types).toEqual([
+      "integrale",
+      "sisteme",
+    ]);
+  });
+
+  it("leaves types undefined when the field is absent (legacy files)", () => {
+    const result = parseImportFile(JSON.stringify(validFile));
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.file.problems[0]!.types).toBeUndefined();
+  });
+
+  it("rejects more than 3 types or empty type strings", () => {
+    const tooMany = {
+      ...validFile,
+      problems: [
+        { number: "1", isDepartajare: false, latex: "$x$", types: ["a", "b", "c", "d"] },
+      ],
+    };
+    expect(parseImportFile(JSON.stringify(tooMany)).ok).toBe(false);
+    const empty = {
+      ...validFile,
+      problems: [
+        { number: "1", isDepartajare: false, latex: "$x$", types: [""] },
+      ],
+    };
+    expect(parseImportFile(JSON.stringify(empty)).ok).toBe(false);
+  });
 });
 
 describe("planImport", () => {
@@ -131,6 +174,56 @@ describe("planImport", () => {
       true,
     );
     expect(plan.counts).toEqual({ created: 1, updated: 1, skipped: 1 });
+  });
+
+  it("leaves tags untouched when types is absent, even on a latex update", () => {
+    const plan = planImport(
+      [{ number: "1", latex: "old", isDepartajare: false, tags: [{ name: "integrale" }] }],
+      [{ number: "1", latex: "new", isDepartajare: false }],
+      true,
+    );
+    expect(plan.problems[0]!.action).toBe("update");
+    expect(plan.problems[0]!.tagChange).toBeUndefined();
+  });
+
+  it("plans a tag change (as an update) when types differ though latex is identical", () => {
+    const plan = planImport(
+      [{ number: "1", latex: "same", isDepartajare: false, tags: [{ name: "integrale" }] }],
+      [{ number: "1", latex: "same", isDepartajare: false, types: ["polinoame"] }],
+      true,
+    );
+    expect(plan.problems[0]!.action).toBe("update");
+    expect(plan.problems[0]!.tagChange).toEqual({
+      from: ["integrale"],
+      to: ["polinoame"],
+    });
+  });
+
+  it("skips when types match the current tags (order-insensitive) — idempotent", () => {
+    const plan = planImport(
+      [
+        {
+          number: "1",
+          latex: "same",
+          isDepartajare: false,
+          tags: [{ name: "sisteme" }, { name: "integrale" }],
+        },
+      ],
+      [{ number: "1", latex: "same", isDepartajare: false, types: ["integrale", "sisteme"] }],
+      true,
+    );
+    expect(plan.problems[0]!.action).toBe("skip");
+    expect(plan.problems[0]!.tagChange).toBeUndefined();
+  });
+
+  it("sets tags on a freshly created problem when types are given", () => {
+    const plan = planImport(
+      [],
+      [{ number: "1", latex: "a", isDepartajare: true, types: ["grafuri"] }],
+      false,
+    );
+    expect(plan.problems[0]!.action).toBe("create");
+    expect(plan.problems[0]!.tagChange).toEqual({ from: [], to: ["grafuri"] });
   });
 });
 

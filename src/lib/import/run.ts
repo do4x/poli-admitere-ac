@@ -1,4 +1,4 @@
-import type { Prisma, PrismaClient } from "@prisma/client";
+import type { Prisma, PrismaClient, Subject } from "@prisma/client";
 import type { ImportFile } from "./schema";
 import { planImport, type ImportPlan, type PlannedProblem } from "./plan";
 
@@ -27,7 +27,12 @@ async function findExam(db: Db, exam: ImportFile["exam"]) {
     },
     include: {
       problems: {
-        select: { number: true, latex: true, isDepartajare: true },
+        select: {
+          number: true,
+          latex: true,
+          isDepartajare: true,
+          tags: { select: { name: true } },
+        },
       },
     },
   });
@@ -52,16 +57,50 @@ export async function runImport(
     const plan = planImport(exam?.problems ?? [], file.problems, exam !== null);
     const examRow = exam ?? (await tx.exam.create({ data: file.exam }));
 
+    // Resolve tag names to ids within this exam's subject, creating any that
+    // are missing. Cached so a name used by several problems is created once.
+    const tagIdByName = new Map<string, string>();
+    async function tagIdsFor(names: readonly string[]): Promise<{ id: string }[]> {
+      const ids: { id: string }[] = [];
+      for (const name of names) {
+        let id = tagIdByName.get(name);
+        if (!id) {
+          const existing = await tx.tag.findFirst({
+            where: { subject: file.exam.subject as Subject, name },
+            select: { id: true },
+          });
+          id =
+            existing?.id ??
+            (
+              await tx.tag.create({
+                data: { subject: file.exam.subject as Subject, name },
+                select: { id: true },
+              })
+            ).id;
+          tagIdByName.set(name, id);
+        }
+        ids.push({ id });
+      }
+      return ids;
+    }
+
     for (const problem of plan.problems) {
       if (problem.action === "create") {
-        await tx.problem.create({
+        const created = await tx.problem.create({
           data: {
             examId: examRow.id,
             number: problem.number,
             latex: problem.latex,
             isDepartajare: problem.isDepartajare,
           },
+          select: { id: true },
         });
+        if (problem.tagChange) {
+          await tx.problem.update({
+            where: { id: created.id },
+            data: { tags: { set: await tagIdsFor(problem.tagChange.to) } },
+          });
+        }
       } else if (problem.action === "update") {
         await tx.problem.update({
           where: {
@@ -69,6 +108,14 @@ export async function runImport(
           },
           data: { latex: problem.latex, isDepartajare: problem.isDepartajare },
         });
+        if (problem.tagChange) {
+          await tx.problem.update({
+            where: {
+              examId_number: { examId: examRow.id, number: problem.number },
+            },
+            data: { tags: { set: await tagIdsFor(problem.tagChange.to) } },
+          });
+        }
       }
     }
 

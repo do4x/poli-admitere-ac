@@ -63,8 +63,12 @@ export default async function ProblemePage({
       include: {
         exam: true,
         tags: { select: { name: true } },
-        solutions: { select: { aiAssisted: true } },
+        solutions: {
+          where: { userId: user?.id ?? "" },
+          select: { aiAssisted: true },
+        },
         attempts: {
+          where: { userId: user?.id ?? "" },
           select: { kind: true, correct: true },
           orderBy: { createdAt: "asc" },
         },

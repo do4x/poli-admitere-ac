@@ -34,8 +34,12 @@ export default async function ProblemPage({
     include: {
       exam: true,
       tags: { select: { id: true, name: true }, orderBy: { name: "asc" } },
-      solutions: { orderBy: { submittedAt: "asc" } },
+      solutions: {
+        where: { userId: user?.id ?? "" },
+        orderBy: { submittedAt: "asc" },
+      },
       attempts: {
+        where: { userId: user?.id ?? "" },
         select: { id: true, kind: true, choice: true, correct: true },
         orderBy: { createdAt: "asc" },
       },

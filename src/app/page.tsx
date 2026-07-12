@@ -23,14 +23,16 @@ export default async function DashboardPage() {
       omit: { correctAnswer: true }, // the key never leaves the server actions
       include: {
         exam: true,
-        solutions: true,
+        solutions: { where: { userId: user.id } },
         attempts: {
+          where: { userId: user.id },
           select: { kind: true, correct: true },
           orderBy: { createdAt: "asc" },
         },
       },
     }),
     prisma.solution.findMany({
+      where: { userId: user.id },
       orderBy: { submittedAt: "desc" },
       take: 8,
       include: { problem: { include: { exam: true } } },

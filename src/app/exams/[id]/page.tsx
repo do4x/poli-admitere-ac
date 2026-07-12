@@ -49,8 +49,12 @@ export default async function ExamPage({
       problems: {
         omit: { correctAnswer: true }, // the key never leaves the server actions
         include: {
-          solutions: { select: { aiAssisted: true } },
+          solutions: {
+            where: { userId: user?.id ?? "" },
+            select: { aiAssisted: true },
+          },
           attempts: {
+            where: { userId: user?.id ?? "" },
             select: { kind: true, correct: true },
             orderBy: { createdAt: "asc" },
           },

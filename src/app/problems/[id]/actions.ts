@@ -1,11 +1,16 @@
 "use server";
 
-import { unlink } from "node:fs/promises";
 import { revalidatePath } from "next/cache";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { computeReviewDueAt } from "@/lib/domain";
-import { savePdf, solutionAbsolutePath } from "@/lib/storage";
+import {
+  MAX_PDF_BYTES,
+  QUOTA_MAX_BYTES,
+  QUOTA_MAX_FILES,
+  removePdf,
+  uploadPdf,
+} from "@/lib/storage";
 
 const NOT_ADMIN = "Doar administratorul poate modifica tipurile.";
 
@@ -33,6 +38,9 @@ export async function uploadSolution(
   if (!file.name.toLowerCase().endsWith(".pdf")) {
     return { error: "Fișierul trebuie să aibă extensia .pdf.", uploadedAt: null };
   }
+  if (file.size > MAX_PDF_BYTES) {
+    return { error: "PDF-ul depășește limita de 10 MB.", uploadedAt: null };
+  }
 
   const problem = await prisma.problem.findUnique({
     where: { id: problemId },
@@ -40,6 +48,21 @@ export async function uploadSolution(
   });
   if (!problem) {
     return { error: "Problema nu există.", uploadedAt: null };
+  }
+
+  const usage = await prisma.solution.aggregate({
+    where: { userId: user.id },
+    _count: true,
+    _sum: { sizeBytes: true },
+  });
+  if (
+    usage._count >= QUOTA_MAX_FILES ||
+    (usage._sum.sizeBytes ?? 0) + file.size > QUOTA_MAX_BYTES
+  ) {
+    return {
+      error: "Ai atins limita de stocare pentru soluții (100 PDF-uri / 500 MB).",
+      uploadedAt: null,
+    };
   }
 
   const bytes = Buffer.from(await file.arrayBuffer());
@@ -50,22 +73,30 @@ export async function uploadSolution(
   const aiAssisted = formData.get("aiAssisted") === "on";
   // Rule 6: submittedAt is decided here, server-side, and is never editable.
   const submittedAt = new Date();
-  const pdfPath = await savePdf(problem.id, bytes, submittedAt);
+
+  let pdfPath: string;
+  try {
+    pdfPath = await uploadPdf(user.id, problem.id, bytes, submittedAt);
+  } catch (error) {
+    console.error("[departaj] Upload-ul în Storage a eșuat:", error);
+    return { error: "Încărcarea PDF-ului a eșuat. Încearcă din nou.", uploadedAt: null };
+  }
 
   try {
     await prisma.solution.create({
       data: {
         problemId: problem.id,
+        userId: user.id,
         pdfPath,
+        sizeBytes: bytes.length,
         submittedAt,
         aiAssisted,
         reviewDueAt: computeReviewDueAt(submittedAt, aiAssisted),
       },
     });
   } catch (error) {
-    // Don't leave an orphaned PDF; surface the failure in the form instead
-    // of crashing (e.g. SQLite locked by a concurrent CLI import).
-    await unlink(solutionAbsolutePath(pdfPath)).catch(() => {});
+    // Don't leave an orphaned PDF; surface the failure in the form.
+    await removePdf(pdfPath).catch(() => {});
     console.error("[departaj] Salvarea soluției a eșuat:", error);
     return {
       error: "Salvarea în baza de date a eșuat. Încearcă din nou.",
@@ -122,6 +153,7 @@ export async function submitAnswerAction(
   const recent = await prisma.answerAttempt.count({
     where: {
       problemId,
+      userId: user.id,
       kind: "CHOICE",
       createdAt: { gte: new Date(Date.now() - 60_000) },
     },
@@ -132,7 +164,7 @@ export async function submitAnswerAction(
 
   const correct = choice === problem.correctAnswer;
   await prisma.answerAttempt.create({
-    data: { problemId, kind: "CHOICE", choice, correct },
+    data: { problemId, userId: user.id, kind: "CHOICE", choice, correct },
   });
 
   revalidateProblem(problemId);
@@ -156,7 +188,7 @@ export async function revealAnswerAction(problemId: string): Promise<void> {
   if (!problem || problem.correctAnswer === null) return;
 
   await prisma.answerAttempt.create({
-    data: { problemId, kind: "REVEAL" },
+    data: { problemId, userId: user.id, kind: "REVEAL" },
   });
 
   revalidateProblem(problemId);

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { examProgress } from "@/lib/domain";
 
@@ -13,12 +14,16 @@ const COLUMNS = [
 ] as const;
 
 export default async function ExamsPage() {
+  const user = await getSessionUser();
   const exams = await prisma.exam.findMany({
     include: {
       problems: {
         select: {
           isDepartajare: true,
-          solutions: { select: { aiAssisted: true } },
+          solutions: {
+            where: { userId: user?.id ?? "" },
+            select: { aiAssisted: true },
+          },
         },
       },
     },

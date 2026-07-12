@@ -4,12 +4,11 @@ import type { Digest } from "./digest";
 export type DigestSender = (digest: Digest) => Promise<void>;
 
 /**
- * Returns a Resend-backed sender, or null when the env vars are absent —
- * the caller logs and skips. A local app must never crash over email.
+ * Returns a Resend-backed sender for one recipient, or null when the env
+ * vars are absent — the caller logs and skips. Never crash over email.
  */
-export function createResendSender(): DigestSender | null {
+export function createResendSender(to: string): DigestSender | null {
   const apiKey = process.env.RESEND_API_KEY;
-  const to = process.env.NOTIFY_EMAIL;
   const from = process.env.RESEND_FROM;
   if (!apiKey || !to || !from) {
     return null;

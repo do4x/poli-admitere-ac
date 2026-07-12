@@ -28,6 +28,8 @@ export interface CheckDueReviewsDeps {
   send: (digest: Digest) => Promise<void>;
   /** Stamp notifiedAt on the given solutions — the dedupe. */
   stampNotified: (solutionIds: string[], at: Date) => Promise<void>;
+  /** Origin used for problem links in the digest. */
+  baseUrl?: string;
 }
 
 export interface CheckDueReviewsResult {
@@ -54,7 +56,10 @@ export async function checkDueReviews(
     return { sent: false, problemCount: 0, solutionIds: [] };
   }
 
-  const digest = buildDigest(toNotify.map((item) => item.problem));
+  const digest = buildDigest(
+    toNotify.map((item) => item.problem),
+    deps.baseUrl,
+  );
   await deps.send(digest);
 
   const solutionIds = toNotify.map((item) => item.solution.id);

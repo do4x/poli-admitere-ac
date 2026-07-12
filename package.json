@@ -12,7 +12,8 @@
     "import:tags": "tsx scripts/import-tags.ts",
     "import:answers": "tsx scripts/import-answers.ts",
     "export:problems": "tsx scripts/export-problems.ts",
-    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
     "postinstall": "prisma generate"
   },
   "dependencies": {

@@ -1,39 +1,24 @@
-import { execSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
-import os from "node:os";
-import path from "node:path";
-import { PrismaClient } from "@prisma/client";
+import type { PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { ImportFile } from "./schema";
 import { planAgainstDb, runImport } from "./run";
+import { createTestDb } from "./test-db";
 
 /**
- * Integration tests on a real temp SQLite db. They exist chiefly to prove the
- * null-session lookup works against actual SQLite NULL semantics (NULLs are
+ * Integration tests on a real throwaway Postgres schema. They exist chiefly to
+ * prove the null-session lookup works against actual NULL semantics (NULLs are
  * distinct in unique indexes), which no mock can demonstrate.
  */
 
-let dir: string;
 let db: PrismaClient;
+let drop: () => Promise<void>;
 
 beforeAll(async () => {
-  dir = mkdtempSync(path.join(os.tmpdir(), "departaj-test-"));
-  const dbPath = path.join(dir, "test.db").replace(/\\/g, "/");
-  const sql = execSync(
-    "npx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script",
-    { encoding: "utf8" },
-  );
-  db = new PrismaClient({ datasourceUrl: `file:${dbPath}` });
-  for (const statement of sql.split(";")) {
-    if (statement.trim()) {
-      await db.$executeRawUnsafe(statement);
-    }
-  }
+  ({ db, drop } = await createTestDb());
 }, 60_000);
 
 afterAll(async () => {
-  await db.$disconnect();
-  rmSync(dir, { recursive: true, force: true });
+  await drop();
 });
 
 function file(overrides?: Partial<ImportFile["exam"]>): ImportFile {

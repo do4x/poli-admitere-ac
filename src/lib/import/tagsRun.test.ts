@@ -1,34 +1,21 @@
-import { execSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
-import os from "node:os";
-import path from "node:path";
-import { PrismaClient } from "@prisma/client";
+import type { PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { runImport } from "./run";
 import type { TagsFile } from "./tagsSchema";
 import { planTagsAgainstDb, runTagsImport } from "./tagsRun";
+import { createTestDb } from "./test-db";
 
 /**
- * Integration tests on a real temp SQLite db — like run.test.ts, they prove the
- * null-session lookup and the tag many-to-many behave against real SQLite.
+ * Integration tests on a real throwaway Postgres schema — like run.test.ts,
+ * they prove the null-session lookup and the tag many-to-many behave against
+ * the real database.
  */
 
-let dir: string;
 let db: PrismaClient;
+let drop: () => Promise<void>;
 
 beforeAll(async () => {
-  dir = mkdtempSync(path.join(os.tmpdir(), "departaj-tags-test-"));
-  const dbPath = path.join(dir, "test.db").replace(/\\/g, "/");
-  const sql = execSync(
-    "npx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script",
-    { encoding: "utf8" },
-  );
-  db = new PrismaClient({ datasourceUrl: `file:${dbPath}` });
-  for (const statement of sql.split(";")) {
-    if (statement.trim()) {
-      await db.$executeRawUnsafe(statement);
-    }
-  }
+  ({ db, drop } = await createTestDb());
   // Seed an exam with a NULL session and two problems.
   await runImport(db, {
     exam: { year: 2024, kind: "ADMITERE", subject: "MATE", session: null },
@@ -40,8 +27,7 @@ beforeAll(async () => {
 }, 60_000);
 
 afterAll(async () => {
-  await db.$disconnect();
-  rmSync(dir, { recursive: true, force: true });
+  await drop();
 });
 
 const exam = {

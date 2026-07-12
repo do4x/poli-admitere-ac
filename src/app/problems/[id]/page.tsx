@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Statement } from "@/components/Statement";
+import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { solveState, type SolveState } from "@/lib/domain";
 import { examLabel, formatDateTime } from "@/lib/format";
@@ -26,6 +27,7 @@ export default async function ProblemPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const user = await getSessionUser();
   const problem = await prisma.problem.findUnique({
     where: { id },
     omit: { correctAnswer: true }, // the key never leaves the server actions
@@ -109,22 +111,34 @@ export default async function ProblemPage({
         <Statement latex={problem.latex} />
       </section>
 
-      {hasKey ? (
+      {hasKey && !user && (
+        <section className="card flex items-center justify-between gap-3 p-4">
+          <h2 className="text-sm font-semibold text-ink">Verificare grilă</h2>
+          <Link
+            href="/login"
+            className="text-sm font-semibold text-brand transition-colors hover:text-brand-700"
+          >
+            Autentifică-te pentru a-ți verifica răspunsul →
+          </Link>
+        </section>
+      )}
+      {hasKey && user ? (
         <GrilaCheck
           problemId={problem.id}
           verified={state === "grila"}
           history={grilaHistory}
           revealedAnswer={revealed ? (keyRow?.correctAnswer ?? null) : null}
         />
-      ) : (
+      ) : !hasKey ? (
         <section className="card flex items-center justify-between gap-3 p-4">
           <h2 className="text-sm font-semibold text-ink">Verificare grilă</h2>
           <p className="text-xs text-faint">
             Răspunsul oficial nu a fost încă importat pentru această problemă.
           </p>
         </section>
-      )}
+      ) : null}
 
+      {user && (
       <section className="space-y-4">
         <h2 className="text-sm font-semibold text-ink">
           Soluții ({problem.solutions.length})
@@ -165,13 +179,15 @@ export default async function ProblemPage({
         })}
         <UploadForm problemId={problem.id} />
       </section>
+      )}
 
-      {/* Curation tooling — becomes admin-only when auth lands (MIGRATION.md). */}
-      <TagEditor
-        problemId={problem.id}
-        tags={problem.tags}
-        available={availableTags}
-      />
+      {user?.isAdmin && (
+        <TagEditor
+          problemId={problem.id}
+          tags={problem.tags}
+          available={availableTags}
+        />
+      )}
     </div>
   );
 }

@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import {
   dueSolutions,
@@ -11,6 +13,10 @@ import { examLabel, formatDateTime } from "@/lib/format";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
+  // Personal workspace — anonymous visitors browse the public problem bank.
+  const user = await getSessionUser();
+  if (!user) redirect("/probleme");
+
   const now = new Date();
   const [problems, recentSolutions] = await Promise.all([
     prisma.problem.findMany({

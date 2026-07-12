@@ -3,19 +3,37 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const LINKS = [
-  { href: "/", label: "Panou", exact: true },
+interface NavUser {
+  email: string;
+  isAdmin: boolean;
+}
+
+const LINKS: {
+  href: string;
+  label: string;
+  exact?: boolean;
+  requires?: "user" | "admin";
+}[] = [
+  { href: "/", label: "Panou", exact: true, requires: "user" },
   { href: "/exams", label: "Examene" },
   { href: "/probleme", label: "Probleme" },
-  { href: "/import", label: "Import" },
+  { href: "/import", label: "Import", requires: "admin" },
 ];
 
-export function Nav() {
+export function Nav({ user }: { user: NavUser | null }) {
   const pathname = usePathname();
+
+  const visible = LINKS.filter((link) =>
+    link.requires === "admin"
+      ? user?.isAdmin
+      : link.requires === "user"
+        ? user !== null
+        : true,
+  );
 
   return (
     <nav className="flex items-center gap-1">
-      {LINKS.map((link) => {
+      {visible.map((link) => {
         const active = link.exact
           ? pathname === link.href
           : pathname.startsWith(link.href);

@@ -2,9 +2,12 @@
 
 import { unlink } from "node:fs/promises";
 import { revalidatePath } from "next/cache";
+import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { computeReviewDueAt } from "@/lib/domain";
 import { savePdf, solutionAbsolutePath } from "@/lib/storage";
+
+const NOT_ADMIN = "Doar administratorul poate modifica tipurile.";
 
 export interface UploadState {
   error: string | null;
@@ -18,6 +21,11 @@ export async function uploadSolution(
   _previous: UploadState,
   formData: FormData,
 ): Promise<UploadState> {
+  const user = await getSessionUser();
+  if (!user) {
+    return { error: "Autentificare necesară pentru a încărca soluții.", uploadedAt: null };
+  }
+
   const file = formData.get("pdf");
   if (!(file instanceof File) || file.size === 0) {
     return { error: "Alege un fișier PDF.", uploadedAt: null };
@@ -92,6 +100,11 @@ export async function submitAnswerAction(
   _previous: GrilaState,
   formData: FormData,
 ): Promise<GrilaState> {
+  const user = await getSessionUser();
+  if (!user) {
+    return { error: "Autentifică-te pentru a verifica răspunsul." };
+  }
+
   const choice = String(formData.get("choice") ?? "");
   if (!(CHOICES as readonly string[]).includes(choice)) {
     return { error: "Alege o variantă (a–f)." };
@@ -133,6 +146,9 @@ export async function submitAnswerAction(
  * self-verify with a known answer). The page re-render shows the key.
  */
 export async function revealAnswerAction(problemId: string): Promise<void> {
+  const user = await getSessionUser();
+  if (!user) return;
+
   const problem = await prisma.problem.findUnique({
     where: { id: problemId },
     select: { correctAnswer: true },
@@ -162,6 +178,9 @@ export async function addTagAction(
   _previous: TagActionState,
   formData: FormData,
 ): Promise<TagActionState> {
+  const user = await getSessionUser();
+  if (!user?.isAdmin) return { error: NOT_ADMIN };
+
   const tagId = String(formData.get("tagId") ?? "");
   if (!tagId) return { error: "Alege un tip." };
 
@@ -202,6 +221,9 @@ export async function removeTagFromProblem(
   problemId: string,
   tagId: string,
 ): Promise<void> {
+  const user = await getSessionUser();
+  if (!user?.isAdmin) return;
+
   const problem = await prisma.problem.findUnique({
     where: { id: problemId },
     select: { id: true },
@@ -221,6 +243,9 @@ export async function createTagAction(
   _previous: TagActionState,
   formData: FormData,
 ): Promise<TagActionState> {
+  const user = await getSessionUser();
+  if (!user?.isAdmin) return { error: NOT_ADMIN };
+
   const name = String(formData.get("name") ?? "").trim();
   if (name.length < 1 || name.length > TAG_NAME_MAX) {
     return { error: `Numele tipului trebuie să aibă 1–${TAG_NAME_MAX} caractere.` };

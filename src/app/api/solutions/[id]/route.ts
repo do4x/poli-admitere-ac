@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { solutionAbsolutePath } from "@/lib/storage";
 
@@ -11,6 +12,11 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const user = await getSessionUser();
+  if (!user) {
+    return new Response("Autentificare necesară.", { status: 401 });
+  }
+
   const { id } = await params;
   const solution = await prisma.solution.findUnique({ where: { id } });
   if (!solution) {

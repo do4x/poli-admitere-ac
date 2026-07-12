@@ -1,8 +1,12 @@
 # Migration Plan — Departaj: local single-user → hosted multi-user (~1000 users)
 
 > Draft 2026-07-11. Target: promote to the UPB subreddit.
-> Status: PLAN ONLY — nothing here is built yet. Supersedes CLAUDE.md's
-> "localhost only, no auth" non-goals when executed.
+> Status: EXECUTING on branch `feat/multi-user`. Supersedes CLAUDE.md's
+> "localhost only, no auth" non-goals.
+> - Phase 0 ✅ 2026-07-12 — Supabase project `qopmafbonhqcqqfvhtgp` (eu-central-1),
+>   baseline + RLS migrations, seed verified 1:1 vs SQLite, 149 tests green.
+>   App connects via dedicated `prisma` role (BYPASSRLS) through the pooler.
+> - Phase 4 ✅ shipped 2026-07-11 (grila, pre-migration).
 
 ## Goal & principles
 

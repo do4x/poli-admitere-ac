@@ -13,6 +13,7 @@ import {
 } from "@/lib/storage";
 
 const NOT_ADMIN = "Doar administratorul poate modifica tipurile.";
+const UPLOADS_PER_DAY = 20;
 
 export interface UploadState {
   error: string | null;
@@ -61,6 +62,19 @@ export async function uploadSolution(
   ) {
     return {
       error: "Ai atins limita de stocare pentru soluții (100 PDF-uri / 500 MB).",
+      uploadedAt: null,
+    };
+  }
+
+  const lastDay = await prisma.solution.count({
+    where: {
+      userId: user.id,
+      submittedAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+    },
+  });
+  if (lastDay >= UPLOADS_PER_DAY) {
+    return {
+      error: "Prea multe încărcări în 24h — continuă mâine.",
       uploadedAt: null,
     };
   }

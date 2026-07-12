@@ -18,6 +18,7 @@ const LINKS: {
   { href: "/exams", label: "Examene" },
   { href: "/probleme", label: "Probleme" },
   { href: "/import", label: "Import", requires: "admin" },
+  { href: "/cont", label: "Cont", requires: "user" },
 ];
 
 export function Nav({ user }: { user: NavUser | null }) {

@@ -16,9 +16,16 @@
 > - Phase 4 ✅ shipped 2026-07-11 (grila, pre-migration).
 > - Phase 5 ✅ 2026-07-12 (46db58b) — /cont + account deletion (delete_user
 >   RPC), 20 uploads/day, error pages, privacy note, UPB attribution footer.
-> - Phase 6 ⏳ blocked on Denis: `vercel login` (or VERCEL_TOKEN), domain +
->   DNS for Resend (also needed as custom SMTP for Supabase Auth emails —
->   built-in SMTP is ~2 emails/h), RESEND_API_KEY, optional Google OAuth.
+> - Phase 6 ✅ DEPLOYED 2026-07-13 — **https://departaj.vercel.app** (project
+>   `departaj`, prisma migrate deploy in build via vercel.json). Smoke tests
+>   green (redirects, gating, 401/404, cron 404/200), GH Actions cron run
+>   `success`, zero runtime errors. Merged to master.
+>   **Pre-launch, still Denis:** (1) Supabase dashboard → Auth → URL
+>   Configuration: Site URL = https://departaj.vercel.app + redirect
+>   allowlist /auth/callback & /auth/confirm (login on prod bounces to
+>   localhost until then); (2) domain + Resend DNS → RESEND_API_KEY +
+>   RESEND_FROM in Vercel env + custom SMTP in Supabase (built-in ~2
+>   emails/h); (3) only then the reddit post. Optional: Google OAuth.
 
 ## Goal & principles
 

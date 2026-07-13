@@ -1,5 +1,13 @@
 # CLAUDE.md — Departaj (UPB Admission Prep Vault)
 
+> **Status 2026-07-12:** promoted to hosted multi-user per **MIGRATION.md**
+> (which supersedes the "local-only / no auth / no deployment" statements
+> below where they conflict). DB = Supabase Postgres via Prisma migrations
+> (`npm run db:deploy`), auth = Supabase magic links (role gating in
+> `src/lib/auth.ts`), PDFs = private Supabase Storage with RLS, review
+> digests = per-user via `/api/cron/reviews`. The counter and all business
+> rules below are unchanged — just scoped per user.
+
 ## What this is
 
 A **local-only, single-user** app for mastering UPB (Politehnica București) admission & pre-admission exam problems in **Mathematics** and **Informatics**, years **2015–2026**. The owner (Denis) imports problems as LaTeX, marks the hard "departajare" (tiebreaker) problems, uploads handwritten solution PDFs, and gets forced spaced-review of anything he solved with AI assistance.

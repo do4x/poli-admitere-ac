@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
-import { LoginForm } from "./LoginForm";
+import { AuthForm } from "./AuthForm";
 
 export const dynamic = "force-dynamic";
 
@@ -18,19 +18,19 @@ export default async function LoginPage({
     <div className="mx-auto max-w-sm space-y-4 py-8">
       <div>
         <h1 className="font-display text-3xl font-extrabold tracking-tight">
-          Autentificare
+          Bine ai venit
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Necesară pentru verificarea grilei și încărcarea soluțiilor.
+          Contul îți păstrează progresul, soluțiile și verificările la grilă.
           Problemele se pot răsfoi liber.
         </p>
       </div>
       {linkError && (
         <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-          Linkul de autentificare este invalid sau expirat. Cere unul nou.
+          Linkul este invalid sau expirat. Intră în cont sau cere altul.
         </p>
       )}
-      <LoginForm />
+      <AuthForm googleEnabled={process.env.GOOGLE_AUTH_ENABLED === "1"} />
     </div>
   );
 }

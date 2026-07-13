@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { Landing } from "./Landing";
 import {
   dueSolutions,
   examProgress,
@@ -13,9 +13,9 @@ import { examLabel, formatDateTime } from "@/lib/format";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  // Personal workspace — anonymous visitors browse the public problem bank.
+  // Personal workspace for members; the public landing page for visitors.
   const user = await getSessionUser();
-  if (!user) redirect("/probleme");
+  if (!user) return <Landing />;
 
   const now = new Date();
   const [problems, recentSolutions] = await Promise.all([

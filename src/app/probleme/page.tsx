@@ -8,6 +8,7 @@ import {
   type ProblemFilters,
   type SolveState,
 } from "@/lib/domain";
+import { getSessionUser } from "@/lib/auth";
 import { examLabel, problemNumberCompare } from "@/lib/format";
 import { FilterBar } from "./FilterBar";
 import { TaxonomyManager } from "./TaxonomyManager";
@@ -54,6 +55,7 @@ export default async function ProblemePage({
 }) {
   const params = await searchParams;
   const parsed = parseFilters(params);
+  const user = await getSessionUser();
 
   const [problems, allTags] = await Promise.all([
     prisma.problem.findMany({
@@ -61,8 +63,12 @@ export default async function ProblemePage({
       include: {
         exam: true,
         tags: { select: { name: true } },
-        solutions: { select: { aiAssisted: true } },
+        solutions: {
+          where: { userId: user?.id ?? "" },
+          select: { aiAssisted: true },
+        },
         attempts: {
+          where: { userId: user?.id ?? "" },
           select: { kind: true, correct: true },
           orderBy: { createdAt: "asc" },
         },
@@ -196,7 +202,7 @@ export default async function ProblemePage({
         </ul>
       )}
 
-      <TaxonomyManager tags={managedTags} />
+      {user?.isAdmin && <TaxonomyManager tags={managedTags} />}
     </div>
   );
 }

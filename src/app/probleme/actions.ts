@@ -2,9 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import type { Subject } from "@prisma/client";
+import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
 const TAG_NAME_MAX = 60;
+const NOT_ADMIN = "Doar administratorul poate modifica taxonomia.";
 
 export interface TaxonomyActionState {
   error: string | null;
@@ -19,6 +21,9 @@ export async function createTag(
   _previous: TaxonomyActionState,
   formData: FormData,
 ): Promise<TaxonomyActionState> {
+  const user = await getSessionUser();
+  if (!user?.isAdmin) return { error: NOT_ADMIN };
+
   const name = String(formData.get("name") ?? "").trim();
   const subject = String(formData.get("subject") ?? "");
   if (subject !== "MATE" && subject !== "INFO") {
@@ -45,6 +50,9 @@ export async function renameTag(
   _previous: TaxonomyActionState,
   formData: FormData,
 ): Promise<TaxonomyActionState> {
+  const user = await getSessionUser();
+  if (!user?.isAdmin) return { error: NOT_ADMIN };
+
   const name = String(formData.get("name") ?? "").trim();
   if (name.length < 1 || name.length > TAG_NAME_MAX) {
     return { error: `Numele tipului trebuie să aibă 1–${TAG_NAME_MAX} caractere.` };
@@ -75,6 +83,9 @@ export async function renameTag(
  * requires an explicit confirmation before calling when problems are attached.
  */
 export async function deleteTag(tagId: string): Promise<void> {
+  const user = await getSessionUser();
+  if (!user?.isAdmin) return;
+
   await prisma.tag.delete({ where: { id: tagId } }).catch(() => {});
   revalidateTaxonomy();
 }

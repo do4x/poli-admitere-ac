@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { examProgress, solveState, type SolveState } from "@/lib/domain";
 import { examLabel, problemNumberCompare } from "@/lib/format";
@@ -41,14 +42,19 @@ export default async function ExamPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const user = await getSessionUser();
   const exam = await prisma.exam.findUnique({
     where: { id },
     include: {
       problems: {
         omit: { correctAnswer: true }, // the key never leaves the server actions
         include: {
-          solutions: { select: { aiAssisted: true } },
+          solutions: {
+            where: { userId: user?.id ?? "" },
+            select: { aiAssisted: true },
+          },
           attempts: {
+            where: { userId: user?.id ?? "" },
             select: { kind: true, correct: true },
             orderBy: { createdAt: "asc" },
           },
@@ -121,23 +127,31 @@ export default async function ExamPage({
                   {status.label}
                 </span>
               )}
-              <form action={toggleDepartajare.bind(null, problem.id)}>
-                <button
-                  type="submit"
-                  className={`shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors ${
-                    problem.isDepartajare
-                      ? "border-amber-500 bg-amber-50 text-amber-700 hover:bg-amber-100"
-                      : "border-line text-faint hover:bg-surface hover:text-ink"
-                  }`}
-                  title={
-                    problem.isDepartajare
-                      ? "Scoate din departajare"
-                      : "Marchează ca departajare"
-                  }
-                >
-                  departajare
-                </button>
-              </form>
+              {user?.isAdmin ? (
+                <form action={toggleDepartajare.bind(null, problem.id)}>
+                  <button
+                    type="submit"
+                    className={`shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors ${
+                      problem.isDepartajare
+                        ? "border-amber-500 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                        : "border-line text-faint hover:bg-surface hover:text-ink"
+                    }`}
+                    title={
+                      problem.isDepartajare
+                        ? "Scoate din departajare"
+                        : "Marchează ca departajare"
+                    }
+                  >
+                    departajare
+                  </button>
+                </form>
+              ) : (
+                problem.isDepartajare && (
+                  <span className="shrink-0 rounded-full border border-amber-500 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+                    departajare
+                  </span>
+                )
+              )}
             </li>
           );
         })}

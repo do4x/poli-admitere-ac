@@ -37,3 +37,6 @@ data/solutions/
 .DS_Store
 .playwright-mcp/
 tsconfig.tsbuildinfo
+
+.vercel
+.env*

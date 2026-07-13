@@ -1,6 +1,10 @@
+import { requireAdmin } from "@/lib/auth";
 import { ImportClient } from "./ImportClient";
 
-export default function ImportPage() {
+export const dynamic = "force-dynamic";
+
+export default async function ImportPage() {
+  await requireAdmin();
   return (
     <div className="space-y-4">
       <div>

@@ -1,0 +1,19 @@
+name: review-digests
+
+on:
+  schedule:
+    - cron: "0 */6 * * *" # every 6h — Vercel Hobby cron is daily-only
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger /api/cron/reviews
+        run: |
+          curl -fsS \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$APP_URL/api/cron/reviews"
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          APP_URL: ${{ secrets.APP_URL }}

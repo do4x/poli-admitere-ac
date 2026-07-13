@@ -1,8 +1,24 @@
 # Migration Plan — Departaj: local single-user → hosted multi-user (~1000 users)
 
 > Draft 2026-07-11. Target: promote to the UPB subreddit.
-> Status: PLAN ONLY — nothing here is built yet. Supersedes CLAUDE.md's
-> "localhost only, no auth" non-goals when executed.
+> Status: EXECUTING on branch `feat/multi-user`. Supersedes CLAUDE.md's
+> "localhost only, no auth" non-goals.
+> - Phase 0 ✅ 2026-07-12 (3fc2c0a) — Supabase project `qopmafbonhqcqqfvhtgp`
+>   (eu-central-1), baseline + RLS migrations, seed verified 1:1 vs SQLite,
+>   149 tests green. App connects via dedicated `prisma` role (BYPASSRLS).
+> - Phase 1 ✅ 2026-07-12 (f5e4b05) — magic-link auth, role gating, User
+>   mirror, verified end-to-end with a real inbox.
+> - Phase 2 ✅ 2026-07-12 (c1d6270) — per-user data, private Storage bucket
+>   with RLS ({userId}/ prefix, no service-role key anywhere), signed URLs,
+>   quotas. Two-account isolation verified incl. raw storage path.
+> - Phase 3 ✅ 2026-07-12 (6d1d5a2) — per-user digests, /api/cron/reviews +
+>   CRON_SECRET, GitHub Actions 6h cron, dev-only setInterval.
+> - Phase 4 ✅ shipped 2026-07-11 (grila, pre-migration).
+> - Phase 5 ✅ 2026-07-12 (46db58b) — /cont + account deletion (delete_user
+>   RPC), 20 uploads/day, error pages, privacy note, UPB attribution footer.
+> - Phase 6 ⏳ blocked on Denis: `vercel login` (or VERCEL_TOKEN), domain +
+>   DNS for Resend (also needed as custom SMTP for Supabase Auth emails —
+>   built-in SMTP is ~2 emails/h), RESEND_API_KEY, optional Google OAuth.
 
 ## Goal & principles
 

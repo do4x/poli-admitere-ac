@@ -1,34 +1,34 @@
-import { readFile } from "node:fs/promises";
+import { NextResponse } from "next/server";
+import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { solutionAbsolutePath } from "@/lib/storage";
+import { signedPdfUrl } from "@/lib/storage";
 
 /**
- * Stream a solution PDF by Solution id. The filesystem path always comes from
- * the DB row (written server-side at upload), never from the client, and is
- * re-validated against the solutions root — no path traversal surface.
+ * Serve a solution PDF: auth → ownership → 60s signed Storage URL.
+ * Non-owners get 404 (not 403) so solution ids don't leak existence.
+ * Storage RLS on the {userId}/ prefix backs this check up.
  */
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const user = await getSessionUser();
+  if (!user) {
+    return new Response("Autentificare necesară.", { status: 401 });
+  }
+
   const { id } = await params;
   const solution = await prisma.solution.findUnique({ where: { id } });
-  if (!solution) {
+  if (!solution || solution.userId !== user.id) {
     return new Response("Soluția nu există.", { status: 404 });
   }
 
-  let bytes: Buffer;
-  try {
-    bytes = await readFile(solutionAbsolutePath(solution.pdfPath));
-  } catch {
-    return new Response("Fișierul PDF lipsește de pe disc.", { status: 404 });
+  const url = await signedPdfUrl(solution.pdfPath, 60);
+  if (!url) {
+    return new Response("PDF-ul nu a putut fi accesat.", { status: 500 });
   }
 
-  return new Response(new Uint8Array(bytes), {
-    headers: {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": "inline",
-      "Cache-Control": "private, max-age=86400",
-    },
+  return NextResponse.redirect(url, {
+    headers: { "Cache-Control": "no-store" },
   });
 }

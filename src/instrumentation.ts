@@ -4,18 +4,22 @@ const globalMarker = globalThis as unknown as {
   departajReviewInterval?: ReturnType<typeof setInterval>;
 };
 
+/**
+ * Dev-only convenience: check on boot + every 6h while running, since a
+ * laptop app has no guaranteed uptime. In production the schedule belongs
+ * to the external cron hitting /api/cron/reviews.
+ */
 export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
+  if (process.env.NODE_ENV !== "development") return;
 
-  const { runDueReviewCheck } = await import("@/lib/notifications/service");
+  const { runDueReviewChecks } = await import("@/lib/notifications/service");
 
-  // On boot: the app has no guaranteed uptime, so catch up immediately.
-  await runDueReviewCheck();
+  await runDueReviewChecks();
 
-  // While running: every 6 hours (spec: plain setInterval, no cron dep).
   if (!globalMarker.departajReviewInterval) {
     globalMarker.departajReviewInterval = setInterval(() => {
-      void runDueReviewCheck();
+      void runDueReviewChecks();
     }, SIX_HOURS_MS);
   }
 }

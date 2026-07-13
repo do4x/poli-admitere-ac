@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { parseImportFile } from "@/lib/import/schema";
 import { planAgainstDb, runImport } from "@/lib/import/run";
@@ -32,7 +33,12 @@ export type CommitResult =
   | { ok: false; error: string }
   | { ok: true; examId: string; examCreated: boolean; counts: PlanCounts };
 
+const NOT_ADMIN = "Doar administratorul poate importa probleme.";
+
 export async function dryRunImport(jsonText: string): Promise<DryRunResult> {
+  const user = await getSessionUser();
+  if (!user?.isAdmin) return { ok: false, error: NOT_ADMIN };
+
   const parsed = parseImportFile(jsonText);
   if (!parsed.ok) {
     return { ok: false, error: parsed.error };
@@ -53,6 +59,9 @@ export async function dryRunImport(jsonText: string): Promise<DryRunResult> {
 }
 
 export async function commitImport(jsonText: string): Promise<CommitResult> {
+  const user = await getSessionUser();
+  if (!user?.isAdmin) return { ok: false, error: NOT_ADMIN };
+
   const parsed = parseImportFile(jsonText);
   if (!parsed.ok) {
     return { ok: false, error: parsed.error };

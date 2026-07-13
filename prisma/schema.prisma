@@ -3,8 +3,18 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:../data/departaj.db"
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        String          @id // = Supabase auth.users.id (uuid)
+  email     String          @unique
+  isAdmin   Boolean         @default(false)
+  createdAt DateTime        @default(now())
+  solutions Solution[]
+  attempts  AnswerAttempt[]
 }
 
 enum ExamKind {
@@ -56,12 +66,14 @@ model AnswerAttempt {
   id        String      @id @default(cuid())
   problemId String
   problem   Problem     @relation(fields: [problemId], references: [id])
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   kind      AttemptKind
   choice    String? // "a".."f" when kind = CHOICE
   correct   Boolean? // server-computed at submit time
   createdAt DateTime    @default(now())
 
-  @@index([problemId, createdAt])
+  @@index([userId, problemId])
 }
 
 model Tag {
@@ -78,9 +90,14 @@ model Solution {
   id          String    @id @default(cuid())
   problemId   String
   problem     Problem   @relation(fields: [problemId], references: [id])
-  pdfPath     String
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pdfPath     String // Supabase Storage object path: {userId}/{problemId}/{ts}.pdf
+  sizeBytes   Int       @default(0) // for the per-user quota
   submittedAt DateTime  @default(now())
   aiAssisted  Boolean   @default(false)
   reviewDueAt DateTime?
   notifiedAt  DateTime?
+
+  @@index([userId])
 }

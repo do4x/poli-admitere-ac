@@ -38,5 +38,9 @@ data/solutions/
 .playwright-mcp/
 tsconfig.tsbuildinfo
 
+# local planning / scratch — keep out of the public repo
+.ultraplan/
+TODO.md
+
 .vercel
 .env*

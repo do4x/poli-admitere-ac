@@ -42,7 +42,7 @@ export default async function RootLayout({
     <html lang="ro" className={`${inter.variable} ${display.variable}`}>
       <body className="min-h-screen">
         <header className="sticky top-0 z-20 border-b border-line/80 bg-surface/80 backdrop-blur-md">
-          <div className="mx-auto flex max-w-5xl items-center gap-6 px-4 py-3">
+          <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:gap-x-6">
             <Link href="/" className="flex items-center gap-2.5">
               <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand text-lg font-bold text-white shadow-soft">
                 ∂
@@ -52,7 +52,7 @@ export default async function RootLayout({
               </span>
             </Link>
             <Nav user={user && { email: user.email, isAdmin: user.isAdmin }} />
-            <div className="ml-auto flex items-center gap-2 rounded-full border border-line bg-card px-3 py-1 text-xs text-muted shadow-soft">
+            <div className="ml-auto hidden items-center gap-2 rounded-full border border-line bg-card px-3 py-1 text-xs text-muted shadow-soft sm:flex">
               <span className="relative flex h-1.5 w-1.5">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-60" />
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-brand" />
@@ -61,7 +61,7 @@ export default async function RootLayout({
               zile până la examen
             </div>
             {user ? (
-              <form action={signOutAction}>
+              <form action={signOutAction} className="ml-auto sm:ml-0">
                 <button
                   type="submit"
                   title={user.email}
@@ -73,7 +73,7 @@ export default async function RootLayout({
             ) : (
               <Link
                 href="/login"
-                className="rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-brand-700"
+                className="ml-auto rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-brand-700 sm:ml-0"
               >
                 Intră
               </Link>

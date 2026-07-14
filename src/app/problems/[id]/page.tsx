@@ -80,7 +80,7 @@ export default async function ProblemPage({
   return (
     <div className="space-y-5">
       <div>
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
           <Link
             href={`/exams/${problem.examId}`}
             className="text-sm text-muted transition-colors hover:text-ink"
@@ -138,7 +138,7 @@ export default async function ProblemPage({
       </section>
 
       {hasKey && !user && (
-        <section className="card flex items-center justify-between gap-3 p-4">
+        <section className="card flex flex-col items-start gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-sm font-semibold text-ink">Verificare grilă</h2>
           <Link
             href="/login"
@@ -156,7 +156,7 @@ export default async function ProblemPage({
           revealedAnswer={revealed ? (keyRow?.correctAnswer ?? null) : null}
         />
       ) : !hasKey ? (
-        <section className="card flex items-center justify-between gap-3 p-4">
+        <section className="card flex flex-col items-start gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-sm font-semibold text-ink">Verificare grilă</h2>
           <p className="text-xs text-faint">
             Răspunsul oficial nu a fost încă importat pentru această problemă.

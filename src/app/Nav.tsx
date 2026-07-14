@@ -33,7 +33,7 @@ export function Nav({ user }: { user: NavUser | null }) {
   );
 
   return (
-    <nav className="flex items-center gap-1">
+    <nav className="flex flex-wrap items-center gap-1">
       {visible.map((link) => {
         const active = link.exact
           ? pathname === link.href

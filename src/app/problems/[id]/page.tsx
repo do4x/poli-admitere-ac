@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { solveState, type SolveState } from "@/lib/domain";
 import { examLabel, formatDateTime, solutionIsImage } from "@/lib/format";
 import { GrilaCheck } from "./GrilaCheck";
+import { PaintCanvas } from "./PaintCanvas";
 import { resolveNext } from "./resolveNext";
 import { TagEditor } from "./TagEditor";
 import { UploadForm } from "./UploadForm";
@@ -213,6 +214,7 @@ export default async function ProblemPage({
           );
         })}
         <UploadForm problemId={problem.id} />
+        <PaintCanvas problemId={problem.id} />
       </section>
       )}
 

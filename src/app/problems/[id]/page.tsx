@@ -4,7 +4,7 @@ import { Statement } from "@/components/Statement";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { solveState, type SolveState } from "@/lib/domain";
-import { examLabel, formatDateTime } from "@/lib/format";
+import { examLabel, formatDateTime, solutionIsImage } from "@/lib/format";
 import { GrilaCheck } from "./GrilaCheck";
 import { TagEditor } from "./TagEditor";
 import { UploadForm } from "./UploadForm";
@@ -173,11 +173,20 @@ export default async function ProblemPage({
                   </span>
                 )}
               </header>
-              <iframe
-                src={`/api/solutions/${solution.id}`}
-                title={`Soluție din ${formatDateTime(solution.submittedAt)}`}
-                className="h-[36rem] w-full rounded-xl border border-line"
-              />
+              {solutionIsImage(solution.pdfPath) ? (
+                // eslint-disable-next-line @next/next/no-img-element -- signed, short-lived Storage URL behind a redirect; next/image can't cache it
+                <img
+                  src={`/api/solutions/${solution.id}`}
+                  alt={`Soluție din ${formatDateTime(solution.submittedAt)}`}
+                  className="max-h-[36rem] w-full rounded-xl border border-line object-contain"
+                />
+              ) : (
+                <iframe
+                  src={`/api/solutions/${solution.id}`}
+                  title={`Soluție din ${formatDateTime(solution.submittedAt)}`}
+                  className="h-[36rem] w-full rounded-xl border border-line"
+                />
+              )}
             </article>
           );
         })}

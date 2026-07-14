@@ -17,14 +17,17 @@ export function UploadForm({ problemId }: { problemId: string }) {
       key={state.uploadedAt ?? "empty"}
       className="card space-y-3 p-4"
     >
-      <h2 className="text-sm font-semibold text-ink">Încarcă o soluție (PDF)</h2>
+      <h2 className="text-sm font-semibold text-ink">Încarcă o soluție (PDF sau poză)</h2>
       <input
         type="file"
-        name="pdf"
-        accept="application/pdf,.pdf"
+        name="file"
+        accept="application/pdf,image/png,image/jpeg"
         required
         className="block w-full text-sm text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-brand file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-white hover:file:bg-brand-700"
       />
+      <p className="text-xs text-faint">
+        PDF, PNG sau JPG, max. 10 MB. Pe telefon poți face o poză direct.
+      </p>
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" name="aiAssisted" className="h-4 w-4 accent-brand" />
         Am rezolvat cu ajutorul AI

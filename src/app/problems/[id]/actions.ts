@@ -5,11 +5,12 @@ import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { computeReviewDueAt } from "@/lib/domain";
 import {
-  MAX_PDF_BYTES,
+  MAX_SOLUTION_BYTES,
   QUOTA_MAX_BYTES,
   QUOTA_MAX_FILES,
-  removePdf,
-  uploadPdf,
+  detectSolutionMime,
+  removeSolutionFile,
+  uploadSolutionFile,
 } from "@/lib/storage";
 
 const NOT_ADMIN = "Doar administratorul poate modifica tipurile.";
@@ -19,8 +20,6 @@ export interface UploadState {
   error: string | null;
   uploadedAt: number | null;
 }
-
-const PDF_MAGIC = "%PDF";
 
 export async function uploadSolution(
   problemId: string,
@@ -32,15 +31,12 @@ export async function uploadSolution(
     return { error: "Autentificare necesară pentru a încărca soluții.", uploadedAt: null };
   }
 
-  const file = formData.get("pdf");
+  const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
-    return { error: "Alege un fișier PDF.", uploadedAt: null };
+    return { error: "Alege un fișier PDF sau o poză.", uploadedAt: null };
   }
-  if (!file.name.toLowerCase().endsWith(".pdf")) {
-    return { error: "Fișierul trebuie să aibă extensia .pdf.", uploadedAt: null };
-  }
-  if (file.size > MAX_PDF_BYTES) {
-    return { error: "PDF-ul depășește limita de 10 MB.", uploadedAt: null };
+  if (file.size > MAX_SOLUTION_BYTES) {
+    return { error: "Fișierul depășește limita de 10 MB.", uploadedAt: null };
   }
 
   const problem = await prisma.problem.findUnique({
@@ -61,7 +57,7 @@ export async function uploadSolution(
     (usage._sum.sizeBytes ?? 0) + file.size > QUOTA_MAX_BYTES
   ) {
     return {
-      error: "Ai atins limita de stocare pentru soluții (100 PDF-uri / 500 MB).",
+      error: "Ai atins limita de stocare pentru soluții (100 fișiere / 500 MB).",
       uploadedAt: null,
     };
   }
@@ -80,20 +76,21 @@ export async function uploadSolution(
   }
 
   const bytes = Buffer.from(await file.arrayBuffer());
-  if (bytes.subarray(0, PDF_MAGIC.length).toString("latin1") !== PDF_MAGIC) {
-    return { error: "Fișierul nu este un PDF valid.", uploadedAt: null };
+  const mime = detectSolutionMime(bytes);
+  if (!mime) {
+    return { error: "Fișierul trebuie să fie PDF, PNG sau JPG.", uploadedAt: null };
   }
 
   const aiAssisted = formData.get("aiAssisted") === "on";
   // Rule 6: submittedAt is decided here, server-side, and is never editable.
   const submittedAt = new Date();
 
-  let pdfPath: string;
+  let filePath: string;
   try {
-    pdfPath = await uploadPdf(user.id, problem.id, bytes, submittedAt);
+    filePath = await uploadSolutionFile(user.id, problem.id, bytes, submittedAt, mime);
   } catch (error) {
     console.error("[departaj] Upload-ul în Storage a eșuat:", error);
-    return { error: "Încărcarea PDF-ului a eșuat. Încearcă din nou.", uploadedAt: null };
+    return { error: "Încărcarea fișierului a eșuat. Încearcă din nou.", uploadedAt: null };
   }
 
   try {
@@ -101,7 +98,7 @@ export async function uploadSolution(
       data: {
         problemId: problem.id,
         userId: user.id,
-        pdfPath,
+        pdfPath: filePath,
         sizeBytes: bytes.length,
         submittedAt,
         aiAssisted,
@@ -109,8 +106,8 @@ export async function uploadSolution(
       },
     });
   } catch (error) {
-    // Don't leave an orphaned PDF; surface the failure in the form.
-    await removePdf(pdfPath).catch(() => {});
+    // Don't leave an orphaned file; surface the failure in the form.
+    await removeSolutionFile(filePath).catch(() => {});
     console.error("[departaj] Salvarea soluției a eșuat:", error);
     return {
       error: "Salvarea în baza de date a eșuat. Încearcă din nou.",

@@ -1,10 +1,10 @@
 -- Supabase Storage setup for the private "solutions" bucket.
 -- Applied via the Supabase SQL editor / MCP (storage.* is not managed by
--- Prisma migrations). Object paths are {userId}/{problemId}/{timestamp}.pdf;
+-- Prisma migrations). Object paths are {userId}/{problemId}/{timestamp}.{pdf|png|jpg};
 -- RLS ties every operation to the folder prefix = auth.uid().
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('solutions', 'solutions', false, 10485760, array['application/pdf'])
+values ('solutions', 'solutions', false, 10485760, array['application/pdf', 'image/png', 'image/jpeg'])
 on conflict (id) do update
   set public = excluded.public,
       file_size_limit = excluded.file_size_limit,

@@ -31,3 +31,11 @@ export function formatDate(date: Date): string {
 export function problemNumberCompare(a: string, b: string): number {
   return a.localeCompare(b, "ro", { numeric: true });
 }
+
+/**
+ * A solution file is a PDF or an image (png/jpg); the kind is encoded in the
+ * stored path's extension. Drives the iframe-vs-img viewer branch.
+ */
+export function solutionIsImage(path: string): boolean {
+  return /\.(png|jpe?g)$/i.test(path);
+}

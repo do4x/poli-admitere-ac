@@ -40,7 +40,7 @@ tsconfig.tsbuildinfo
 
 # local planning / scratch — keep out of the public repo
 .ultraplan/
-TODO.md
+TODO*.md
 
 .vercel
 .env*

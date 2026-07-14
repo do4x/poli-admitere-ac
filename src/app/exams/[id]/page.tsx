@@ -107,7 +107,7 @@ export default async function ExamPage({
                 />
               )}
               <Link
-                href={`/problems/${problem.id}`}
+                href={`/problems/${problem.id}?from=exam`}
                 className="flex min-w-0 flex-1 items-center gap-3"
               >
                 <span className="font-display w-12 shrink-0 font-bold">

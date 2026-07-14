@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { solveState, type SolveState } from "@/lib/domain";
 import { examLabel, formatDateTime, solutionIsImage } from "@/lib/format";
 import { GrilaCheck } from "./GrilaCheck";
+import { resolveNext } from "./resolveNext";
 import { TagEditor } from "./TagEditor";
 import { UploadForm } from "./UploadForm";
 
@@ -23,10 +24,13 @@ const SUBJECT: Record<string, { dot: string; label: string }> = {
 
 export default async function ProblemPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { id } = await params;
+  const sp = await searchParams;
   const user = await getSessionUser();
   const problem = await prisma.problem.findUnique({
     where: { id },
@@ -46,6 +50,8 @@ export default async function ProblemPage({
     },
   });
   if (!problem) notFound();
+
+  const next = await resolveNext(problem.id, problem.examId, user?.id, sp);
 
   const subjectTags = await prisma.tag.findMany({
     where: { subject: problem.exam.subject },
@@ -74,12 +80,28 @@ export default async function ProblemPage({
   return (
     <div className="space-y-5">
       <div>
-        <Link
-          href={`/exams/${problem.examId}`}
-          className="text-sm text-muted transition-colors hover:text-ink"
-        >
-          ← {examLabel(problem.exam)}
-        </Link>
+        <div className="flex items-center justify-between gap-3">
+          <Link
+            href={`/exams/${problem.examId}`}
+            className="text-sm text-muted transition-colors hover:text-ink"
+          >
+            ← {examLabel(problem.exam)}
+          </Link>
+          {next && (
+            <Link
+              href={next.href}
+              title={
+                next.scope === "filter"
+                  ? "Următoarea din filtrul curent"
+                  : "Următoarea din examen"
+              }
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-line bg-card px-3 py-1.5 text-sm font-semibold text-brand shadow-soft transition-colors hover:border-brand hover:text-brand-700"
+            >
+              Următoarea problemă
+              <span aria-hidden>→</span>
+            </Link>
+          )}
+        </div>
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <h1 className="font-display text-3xl font-extrabold tracking-tight">
             Problema {problem.number}
@@ -200,6 +222,18 @@ export default async function ProblemPage({
           tags={problem.tags}
           available={availableTags}
         />
+      )}
+
+      {next && (
+        <div className="flex justify-end pt-1">
+          <Link
+            href={next.href}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-soft transition-colors hover:bg-brand-700"
+          >
+            Următoarea problemă
+            <span aria-hidden>→</span>
+          </Link>
+        </div>
       )}
     </div>
   );

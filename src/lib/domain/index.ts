@@ -21,7 +21,9 @@ export { solveState, type AttemptLike, type SolveState } from "./solveState";
 export {
   tagCounts,
   matchesFilters,
+  selectVisible,
   type FilterableProblem,
+  type ListProblem,
   type ProblemFilters,
   type TagCounts,
 } from "./tagFilters";

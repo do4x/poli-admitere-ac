@@ -2,16 +2,17 @@ import Link from "next/link";
 import { Statement } from "@/components/Statement";
 import { prisma } from "@/lib/db";
 import {
-  matchesFilters,
+  selectVisible,
   solveState,
   tagCounts,
   type ProblemFilters,
   type SolveState,
 } from "@/lib/domain";
 import { getSessionUser } from "@/lib/auth";
-import { examLabel, problemNumberCompare } from "@/lib/format";
+import { examLabel } from "@/lib/format";
 import { FilterBar } from "./FilterBar";
 import { TaxonomyManager } from "./TaxonomyManager";
+import { fetchFilterableProblems } from "./query";
 import { parseFilters } from "./searchFilters";
 
 export const dynamic = "force-dynamic";
@@ -58,22 +59,7 @@ export default async function ProblemePage({
   const user = await getSessionUser();
 
   const [problems, allTags] = await Promise.all([
-    prisma.problem.findMany({
-      omit: { correctAnswer: true }, // the key never leaves the server actions
-      include: {
-        exam: true,
-        tags: { select: { name: true } },
-        solutions: {
-          where: { userId: user?.id ?? "" },
-          select: { aiAssisted: true },
-        },
-        attempts: {
-          where: { userId: user?.id ?? "" },
-          select: { kind: true, correct: true },
-          orderBy: { createdAt: "asc" },
-        },
-      },
-    }),
+    fetchFilterableProblems(user?.id),
     prisma.tag.findMany({
       select: { id: true, name: true, subject: true },
       orderBy: [{ subject: "asc" }, { name: "asc" }],
@@ -89,21 +75,19 @@ export default async function ProblemePage({
     departajareOnly: !parsed.toate,
   };
 
-  const filterable = (p: (typeof problems)[number]) => ({
-    isDepartajare: p.isDepartajare,
-    subject: p.exam.subject,
-    year: p.exam.year,
-    tags: p.tags,
-    solutions: p.solutions,
-    attempts: p.attempts,
-  });
+  const visible = selectVisible(problems, domainFilters);
 
-  const visible = problems
-    .filter((p) => matchesFilters(filterable(p), domainFilters))
-    .sort(
-      (a, b) =>
-        b.exam.year - a.exam.year || problemNumberCompare(a.number, b.number),
-    );
+  // Carry the active filter into each problem link so its "next" button walks
+  // this same list.
+  const ctxQuery = (() => {
+    const p = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) {
+      const single = Array.isArray(v) ? v[0] : v;
+      if (single) p.set(k, single);
+    }
+    p.set("from", "probleme");
+    return p.toString();
+  })();
 
   const scopeSet = problems.filter((p) => (parsed.toate ? true : p.isDepartajare));
   const counts = tagCounts(scopeSet.map((p) => ({ tags: p.tags })));
@@ -152,7 +136,10 @@ export default async function ProblemePage({
             const spine = SUBJECT_SPINE[problem.exam.subject] ?? "bg-stone-400";
             return (
               <li key={problem.id}>
-                <Link href={`/problems/${problem.id}`} className="block">
+                <Link
+                  href={`/problems/${problem.id}?${ctxQuery}`}
+                  className="block"
+                >
                   <article
                     className={`relative overflow-hidden rounded-2xl border-2 bg-card py-4 pl-6 pr-4 shadow-soft transition-all hover:-translate-y-0.5 hover:shadow-lift ${status.border}`}
                   >

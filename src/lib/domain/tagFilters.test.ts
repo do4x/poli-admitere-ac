@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   matchesFilters,
+  selectVisible,
   tagCounts,
   type FilterableProblem,
+  type ListProblem,
 } from "./tagFilters";
 
 describe("tagCounts", () => {
@@ -100,5 +102,48 @@ describe("matchesFilters", () => {
       matchesFilters(regular, { departajareOnly: true, subject: "MATE" }),
     ).toBe(false);
     expect(matchesFilters(problem(), { departajareOnly: true })).toBe(true);
+  });
+});
+
+function listProblem(over: Partial<ListProblem> = {}): ListProblem {
+  return {
+    id: "p",
+    number: "1",
+    isDepartajare: true,
+    exam: { subject: "MATE", year: 2024 },
+    tags: [],
+    solutions: [],
+    ...over,
+  };
+}
+
+describe("selectVisible", () => {
+  it("orders by year desc, then problem number (numeric-aware)", () => {
+    const problems = [
+      listProblem({ id: "a", number: "10", exam: { subject: "MATE", year: 2024 } }),
+      listProblem({ id: "b", number: "2", exam: { subject: "MATE", year: 2024 } }),
+      listProblem({ id: "c", number: "1", exam: { subject: "MATE", year: 2025 } }),
+    ];
+    // 2025 first; within 2024, "2" before "10" (numeric, not lexicographic).
+    expect(selectVisible(problems, {}).map((p) => p.id)).toEqual(["c", "b", "a"]);
+  });
+
+  it("keeps only problems that match the filters", () => {
+    const problems = [
+      listProblem({ id: "dep", isDepartajare: true }),
+      listProblem({ id: "reg", isDepartajare: false }),
+    ];
+    expect(
+      selectVisible(problems, { departajareOnly: true }).map((p) => p.id),
+    ).toEqual(["dep"]);
+  });
+
+  it("does not mutate the input array", () => {
+    const problems = [
+      listProblem({ id: "a", number: "2" }),
+      listProblem({ id: "b", number: "1" }),
+    ];
+    selectVisible(problems, {});
+    expect(problems.map((p) => p.id)).toEqual(["a", "b"]);
   });
 });

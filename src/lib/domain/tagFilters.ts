@@ -1,3 +1,4 @@
+import { problemNumberCompare } from "@/lib/format";
 import { solveState, type AttemptLike, type SolveState } from "./solveState";
 
 /** A problem reduced to just the fields filtering depends on. */
@@ -70,4 +71,44 @@ export function matchesFilters(
     return false;
   }
   return true;
+}
+
+/** A problem carrying its exam + the current user's solve-state relations. */
+export interface ListProblem {
+  id: string;
+  number: string;
+  isDepartajare: boolean;
+  exam: { subject: string; year: number };
+  tags: readonly { name: string }[];
+  solutions: readonly { aiAssisted: boolean }[];
+  attempts?: readonly AttemptLike[];
+}
+
+/**
+ * Filter + order a problem list exactly as /probleme renders it (year desc,
+ * then problem number). Shared by the /probleme page and the "next problem"
+ * resolver so the button can never disagree with the list you came from.
+ */
+export function selectVisible<T extends ListProblem>(
+  problems: readonly T[],
+  filters: ProblemFilters,
+): T[] {
+  return problems
+    .filter((p) =>
+      matchesFilters(
+        {
+          isDepartajare: p.isDepartajare,
+          subject: p.exam.subject,
+          year: p.exam.year,
+          tags: p.tags,
+          solutions: p.solutions,
+          attempts: p.attempts,
+        },
+        filters,
+      ),
+    )
+    .sort(
+      (a, b) =>
+        b.exam.year - a.exam.year || problemNumberCompare(a.number, b.number),
+    );
 }

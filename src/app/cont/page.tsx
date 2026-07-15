@@ -1,7 +1,13 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { examLabel, formatDate, solutionIsImage } from "@/lib/format";
+import { grilaCountsAsDone, solveState } from "@/lib/domain";
+import {
+  examLabel,
+  formatDate,
+  problemNumberCompare,
+  solutionIsImage,
+} from "@/lib/format";
 import { deleteAccountAction } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +26,45 @@ export default async function ContPage() {
     },
   });
   const totalBytes = solutions.reduce((sum, s) => sum + s.sizeBytes, 0);
+
+  // Problems that need an independent solution to actually count: solved
+  // only with AI, or grila-checked but guessed in 3+ tries. No latex needed
+  // here — just enough to identify and label each row.
+  const redoCandidates = await prisma.problem.findMany({
+    where: {
+      OR: [
+        { solutions: { some: { userId: user.id } } },
+        { attempts: { some: { userId: user.id } } },
+      ],
+    },
+    omit: { correctAnswer: true, latex: true },
+    relationLoadStrategy: "join",
+    include: {
+      exam: true,
+      solutions: { where: { userId: user.id }, select: { aiAssisted: true } },
+      attempts: {
+        where: { userId: user.id },
+        select: { kind: true, correct: true },
+        orderBy: { createdAt: "asc" },
+      },
+    },
+  });
+
+  const toRedo = redoCandidates
+    .map((p) => ({
+      problem: p,
+      state: solveState(p.solutions, p.attempts),
+      guessed: !grilaCountsAsDone(p.attempts),
+    }))
+    .filter(
+      ({ state, guessed }) =>
+        state === "doar_ai" || (state === "grila" && guessed),
+    )
+    .sort(
+      (a, b) =>
+        b.problem.exam.year - a.problem.exam.year ||
+        problemNumberCompare(a.problem.number, b.problem.number),
+    );
 
   return (
     <div className="mx-auto max-w-xl space-y-6">
@@ -101,6 +146,54 @@ export default async function ContPage() {
                     </span>
                   )}
                 </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="card space-y-3 p-5">
+        <div>
+          <h2 className="text-sm font-semibold text-ink">
+            De refăcut singur ({toRedo.length})
+          </h2>
+          <p className="mt-0.5 text-xs text-muted">
+            Rezolvate cu ajutorul AI sau ghicite pe grilă din 3+ încercări — nu
+            contează la totalul de departajare până nu încarci o rezolvare
+            scrisă de tine.
+          </p>
+        </div>
+        {toRedo.length === 0 ? (
+          <p className="text-sm text-muted">
+            Nimic de refăcut — tot ce ai rezolvat cu AI sau ghicit pe grilă a
+            fost deja acoperit de o rezolvare independentă.
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {toRedo.map(({ problem, state }) => (
+              <li key={problem.id}>
+                <Link
+                  href={`/problems/${problem.id}`}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-line p-2.5 transition-colors hover:bg-surface"
+                >
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium text-ink">
+                      Problema {problem.number}
+                    </div>
+                    <div className="truncate text-xs text-faint">
+                      {examLabel(problem.exam)}
+                    </div>
+                  </div>
+                  {state === "doar_ai" ? (
+                    <span className="shrink-0 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-bold uppercase text-orange-700">
+                      doar cu AI
+                    </span>
+                  ) : (
+                    <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-700">
+                      grilă din 3+ încercări
+                    </span>
+                  )}
+                </Link>
               </li>
             ))}
           </ul>

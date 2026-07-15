@@ -22,6 +22,10 @@ export default async function DashboardPage() {
   const [problems, recentSolutions] = await Promise.all([
     prisma.problem.findMany({
       omit: { correctAnswer: true }, // the key never leaves the server actions
+      // Single joined query instead of one round-trip per relation — see
+      // src/app/probleme/query.ts for why this matters over the pooled
+      // connection.
+      relationLoadStrategy: "join",
       include: {
         exam: true,
         solutions: { where: { userId: user.id } },

@@ -9,6 +9,12 @@ import { prisma } from "@/lib/db";
 export function fetchFilterableProblems(userId: string | undefined) {
   return prisma.problem.findMany({
     omit: { correctAnswer: true },
+    // Single SQL query (LATERAL joins) instead of Prisma's default one
+    // round-trip per relation — the pooled connection (Supabase pgbouncer,
+    // transaction mode) pays a fixed ~70-140ms per statement, so 6 sequential
+    // queries (problem, exam, tag-join, tag, solution, attempt) added up to
+    // ~650-900ms. One joined query cuts that to a single round trip.
+    relationLoadStrategy: "join",
     include: {
       exam: true,
       tags: { select: { name: true } },

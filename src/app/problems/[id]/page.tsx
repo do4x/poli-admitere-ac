@@ -224,18 +224,6 @@ export default async function ProblemPage({
           available={availableTags}
         />
       )}
-
-      {next && (
-        <div className="flex justify-end pt-1">
-          <Link
-            href={next.href}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-soft transition-colors hover:bg-brand-700"
-          >
-            Următoarea problemă
-            <span aria-hidden>→</span>
-          </Link>
-        </div>
-      )}
     </div>
   );
 }

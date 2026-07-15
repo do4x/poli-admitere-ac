@@ -20,6 +20,8 @@ interface GrilaCheckProps {
   problemId: string;
   /** Correct choice already submitted before any reveal. */
   verified: boolean;
+  /** Correct within the first 2 tries — only then it moves the counter. */
+  countsTowardGoal: boolean;
   history: PastChoice[];
   /** The official key, present ONLY after the user chose to reveal it. */
   revealedAnswer: string | null;
@@ -28,6 +30,7 @@ interface GrilaCheckProps {
 export function GrilaCheck({
   problemId,
   verified,
+  countsTowardGoal,
   history,
   revealedAnswer,
 }: GrilaCheckProps) {
@@ -47,6 +50,13 @@ export function GrilaCheck({
           </span>
         )}
       </div>
+
+      {verified && !countsTowardGoal && (
+        <p className="text-xs text-amber-700">
+          Răspunsul corect a venit după mai mult de 2 încercări — nu contează
+          la obiectiv. Rezolv-o singur ca să iasă din numărătoare.
+        </p>
+      )}
 
       {revealedAnswer ? (
         <p className="text-sm text-muted">

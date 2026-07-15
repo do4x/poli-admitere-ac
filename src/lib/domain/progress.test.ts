@@ -81,3 +81,94 @@ describe("examProgress", () => {
     ).toEqual({ done: 1, total: 3 });
   });
 });
+
+describe("grila counts as progress (owner decision 2026-07-15)", () => {
+  it("a pre-reveal correct grila check (no solution submitted) is done", () => {
+    expect(
+      isDone({
+        isDepartajare: true,
+        solutions: [],
+        attempts: [{ kind: "CHOICE", correct: true }],
+      }),
+    ).toBe(true);
+  });
+
+  it("correct on the 2nd try is still done", () => {
+    expect(
+      isDone({
+        isDepartajare: true,
+        solutions: [],
+        attempts: [
+          { kind: "CHOICE", correct: false },
+          { kind: "CHOICE", correct: true },
+        ],
+      }),
+    ).toBe(true);
+  });
+
+  it("correct on the 3rd try is NOT done — still counts as remaining", () => {
+    const guessed = {
+      isDepartajare: true,
+      solutions: [],
+      attempts: [
+        { kind: "CHOICE", correct: false },
+        { kind: "CHOICE", correct: false },
+        { kind: "CHOICE", correct: true },
+      ],
+    } as const;
+    expect(isDone(guessed)).toBe(false);
+    expect(remainingCount([guessed])).toBe(1);
+    expect(examProgress([guessed])).toEqual({ done: 0, total: 1 });
+  });
+
+  it("a revealed-then-correct grila is NOT done (taint)", () => {
+    expect(
+      isDone({
+        isDepartajare: true,
+        solutions: [],
+        attempts: [
+          { kind: "REVEAL", correct: null },
+          { kind: "CHOICE", correct: true },
+        ],
+      }),
+    ).toBe(false);
+  });
+
+  it("a grila-verified departajare problem is not remaining", () => {
+    expect(
+      remainingCount([
+        {
+          isDepartajare: true,
+          solutions: [],
+          attempts: [{ kind: "CHOICE", correct: true }],
+        },
+      ]),
+    ).toBe(0);
+  });
+
+  it("an AI-only solution still counts as remaining even with a grila check", () => {
+    expect(
+      remainingCount([
+        {
+          isDepartajare: true,
+          solutions: [aiAssisted],
+          attempts: [{ kind: "CHOICE", correct: true }],
+        },
+      ]),
+    ).toBe(1);
+  });
+
+  it("examProgress counts grila alongside singur", () => {
+    expect(
+      examProgress([
+        { isDepartajare: true, solutions: [independent] }, // singur
+        {
+          isDepartajare: true,
+          solutions: [],
+          attempts: [{ kind: "CHOICE", correct: true }],
+        }, // grila
+        { isDepartajare: true, solutions: [] }, // remaining
+      ]),
+    ).toEqual({ done: 2, total: 3 });
+  });
+});

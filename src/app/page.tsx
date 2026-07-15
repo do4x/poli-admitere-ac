@@ -5,6 +5,7 @@ import { Landing } from "./Landing";
 import {
   dueSolutions,
   examProgress,
+  grilaCountsAsDone,
   remainingCount,
   solveState,
 } from "@/lib/domain";
@@ -42,10 +43,15 @@ export default async function DashboardPage() {
   const remaining = remainingCount(problems);
   const totalDepartajare = problems.filter((p) => p.isDepartajare).length;
   const doneDepartajare = totalDepartajare - remaining;
-  const grilaVerified = problems.filter(
+  const grilaProblems = problems.filter(
     (p) =>
       p.isDepartajare && solveState(p.solutions, p.attempts) === "grila",
+  );
+  // Only 1st/2nd-try checks count as done; 3+ tries = guessed, still remaining.
+  const grilaVerified = grilaProblems.filter((p) =>
+    grilaCountsAsDone(p.attempts),
   ).length;
+  const grilaGuessed = grilaProblems.length - grilaVerified;
   const percentDone =
     totalDepartajare === 0
       ? 0
@@ -116,7 +122,8 @@ export default async function DashboardPage() {
             {remaining}
           </div>
           <p className="mt-3 text-sm text-muted">
-            rezolvate singur, fără AI — ținta este{" "}
+            rezolvate singur sau verificate pe grilă din cel mult 2 încercări —
+            ținta este{" "}
             <span className="font-semibold text-ink">0</span> până la 24 iulie
             2026
           </p>
@@ -140,7 +147,14 @@ export default async function DashboardPage() {
             </div>
             {grilaVerified > 0 && (
               <p className="mt-2 text-xs text-teal-700">
-                + {grilaVerified} verificate pe grilă, fără rezolvare trimisă
+                din care {grilaVerified} verificate doar pe grilă (fără rezolvare
+                scrisă)
+              </p>
+            )}
+            {grilaGuessed > 0 && (
+              <p className="mt-1 text-xs text-amber-700">
+                {grilaGuessed} verificate pe grilă din 3+ încercări — nu
+                contează, rezolvă-le singur
               </p>
             )}
           </div>

@@ -39,3 +39,33 @@ export function solveState(
   }
   return "nerezolvata";
 }
+
+/** A grila check counts toward the completion goal only when the correct
+ * answer came this early (owner decision 2026-07-15). */
+export const GRILA_MAX_TRIES = 2;
+
+/**
+ * True iff the first pre-reveal correct choice was among the first
+ * `maxTries` choices. Guessing your way to green in 3+ tries keeps the
+ * "grila" status but does NOT count as done — the counter stays put.
+ * Attempts must be passed in chronological order; REVEAL taints everything
+ * after it, same as in `solveState`.
+ */
+export function grilaCountsAsDone(
+  attempts: readonly AttemptLike[],
+  maxTries: number = GRILA_MAX_TRIES,
+): boolean {
+  let revealed = false;
+  let tries = 0;
+  for (const attempt of attempts) {
+    if (attempt.kind === "REVEAL") {
+      revealed = true;
+      continue;
+    }
+    tries++;
+    if (attempt.correct === true && !revealed) {
+      return tries <= maxTries;
+    }
+  }
+  return false;
+}

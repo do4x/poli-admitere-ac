@@ -17,7 +17,13 @@ export {
   type DueSolutionInput,
   type DueItem,
 } from "./dueQueue";
-export { solveState, type AttemptLike, type SolveState } from "./solveState";
+export {
+  GRILA_MAX_TRIES,
+  grilaCountsAsDone,
+  solveState,
+  type AttemptLike,
+  type SolveState,
+} from "./solveState";
 export {
   tagCounts,
   matchesFilters,

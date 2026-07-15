@@ -24,6 +24,11 @@ export default async function ExamsPage() {
             where: { userId: user?.id ?? "" },
             select: { aiAssisted: true },
           },
+          attempts: {
+            where: { userId: user?.id ?? "" },
+            select: { kind: true, correct: true },
+            orderBy: { createdAt: "asc" },
+          },
         },
       },
     },
@@ -44,8 +49,8 @@ export default async function ExamsPage() {
           Examene
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Progresul arată problemele de departajare rezolvate singur / total pe
-          examen.
+          Progresul arată problemele de departajare rezolvate (singur sau
+          verificate pe grilă) / total pe examen.
         </p>
       </div>
       <div className="card overflow-x-auto">

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { solveState } from "./solveState";
+import { grilaCountsAsDone, solveState } from "./solveState";
 
 const independent = { aiAssisted: false };
 const aiAssisted = { aiAssisted: true };
@@ -54,5 +54,34 @@ describe("solveState — grila ladder", () => {
 
   it("attempts alone never produce 'singur' (commitment device intact)", () => {
     expect(solveState([], [correct, correct, correct])).not.toBe("singur");
+  });
+});
+
+describe("grilaCountsAsDone — the 2-try budget (owner decision 2026-07-15)", () => {
+  it("correct on the 1st try counts", () => {
+    expect(grilaCountsAsDone([correct])).toBe(true);
+  });
+
+  it("correct on the 2nd try counts", () => {
+    expect(grilaCountsAsDone([wrong, correct])).toBe(true);
+  });
+
+  it("correct on the 3rd try does NOT count (status stays 'grila' though)", () => {
+    expect(grilaCountsAsDone([wrong, wrong, correct])).toBe(false);
+    expect(solveState([], [wrong, wrong, correct])).toBe("grila");
+  });
+
+  it("no correct attempt never counts", () => {
+    expect(grilaCountsAsDone([])).toBe(false);
+    expect(grilaCountsAsDone([wrong, wrong])).toBe(false);
+  });
+
+  it("a reveal taints later correct attempts", () => {
+    expect(grilaCountsAsDone([reveal, correct])).toBe(false);
+    expect(grilaCountsAsDone([wrong, reveal, correct])).toBe(false);
+  });
+
+  it("a reveal does not consume a try — only choices count", () => {
+    expect(grilaCountsAsDone([correct, reveal])).toBe(true);
   });
 });

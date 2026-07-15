@@ -83,7 +83,7 @@ export default async function ExamPage({
           {examLabel(exam)}
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Departajare rezolvate singur:{" "}
+          Departajare rezolvate (singur sau pe grilă):{" "}
           <span className="font-semibold text-ink tabular-nums">
             {progress.done}/{progress.total}
           </span>

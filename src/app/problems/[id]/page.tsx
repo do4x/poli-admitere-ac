@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Statement } from "@/components/Statement";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { solveState, type SolveState } from "@/lib/domain";
+import { grilaCountsAsDone, solveState, type SolveState } from "@/lib/domain";
 import { examLabel, formatDateTime, solutionIsImage } from "@/lib/format";
 import { GrilaCheck } from "./GrilaCheck";
 import { resolveNext } from "./resolveNext";
@@ -152,6 +152,7 @@ export default async function ProblemPage({
         <GrilaCheck
           problemId={problem.id}
           verified={state === "grila"}
+          countsTowardGoal={grilaCountsAsDone(problem.attempts)}
           history={grilaHistory}
           revealedAnswer={revealed ? (keyRow?.correctAnswer ?? null) : null}
         />

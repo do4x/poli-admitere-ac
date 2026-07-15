@@ -55,6 +55,40 @@ export function parseFilters(
   return filters;
 }
 
+/** Problems per /probleme page. */
+export const PAGE_SIZE = 25;
+
+/**
+ * Parse the `pagina` search param: a 1-based page number, defaulting to 1
+ * for anything absent/invalid (never throws on a junk URL).
+ */
+export function parsePage(
+  searchParams: Record<string, string | string[] | undefined>,
+): number {
+  const raw = first(searchParams.pagina);
+  const n = raw !== undefined ? Number(raw) : 1;
+  return Number.isInteger(n) && n >= 1 ? n : 1;
+}
+
+/**
+ * Href for a given page number, preserving every other active search param.
+ * Page 1 omits `pagina` entirely so the "default" URL stays clean.
+ */
+export function pageHref(
+  current: Record<string, string | string[] | undefined>,
+  page: number,
+): string {
+  const params = new URLSearchParams();
+  for (const [k, v] of Object.entries(current)) {
+    if (k === "pagina") continue;
+    const single = first(v);
+    if (single !== undefined && single !== "") params.set(k, single);
+  }
+  if (page > 1) params.set("pagina", String(page));
+  const query = params.toString();
+  return query ? `/probleme?${query}` : "/probleme";
+}
+
 /**
  * Query string for a chip link: toggles `key`=`value` on top of the current
  * raw params — sets it if absent/different, clears it if already active —
@@ -76,6 +110,8 @@ export function toggleParam(
   } else {
     params.set(key, value);
   }
+  // Changing a filter invalidates the old page position — back to page 1.
+  params.delete("pagina");
 
   const query = params.toString();
   return query ? `?${query}` : "";

@@ -13,7 +13,7 @@ import { examLabel } from "@/lib/format";
 import { FilterBar } from "./FilterBar";
 import { TaxonomyManager } from "./TaxonomyManager";
 import { fetchFilterableProblems } from "./query";
-import { parseFilters } from "./searchFilters";
+import { PAGE_SIZE, pageHref, parseFilters, parsePage } from "./searchFilters";
 
 export const dynamic = "force-dynamic";
 
@@ -77,8 +77,12 @@ export default async function ProblemePage({
 
   const visible = selectVisible(problems, domainFilters);
 
+  const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
+  const page = Math.min(parsePage(params), totalPages);
+  const pageItems = visible.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
   // Carry the active filter into each problem link so its "next" button walks
-  // this same list.
+  // this same list (the full filtered list, not just the current page).
   const ctxQuery = (() => {
     const p = new URLSearchParams();
     for (const [k, v] of Object.entries(params)) {
@@ -131,7 +135,7 @@ export default async function ProblemePage({
         </p>
       ) : (
         <ul className="space-y-3">
-          {visible.map((problem) => {
+          {pageItems.map((problem) => {
             const status = STATUS[solveState(problem.solutions, problem.attempts)];
             const spine = SUBJECT_SPINE[problem.exam.subject] ?? "bg-stone-400";
             return (
@@ -187,6 +191,38 @@ export default async function ProblemePage({
             );
           })}
         </ul>
+      )}
+
+      {totalPages > 1 && (
+        <nav className="flex items-center justify-between border-t border-line pt-4 text-sm">
+          {page > 1 ? (
+            <Link
+              href={pageHref(params, page - 1)}
+              className="rounded-full border border-line bg-card px-3 py-1 font-medium text-muted shadow-soft transition-colors hover:border-ink/20 hover:text-ink"
+            >
+              ← anterioara
+            </Link>
+          ) : (
+            <span className="rounded-full border border-line px-3 py-1 font-medium text-faint opacity-50">
+              ← anterioara
+            </span>
+          )}
+          <span className="tabular-nums text-muted">
+            pagina {page} din {totalPages}
+          </span>
+          {page < totalPages ? (
+            <Link
+              href={pageHref(params, page + 1)}
+              className="rounded-full border border-line bg-card px-3 py-1 font-medium text-muted shadow-soft transition-colors hover:border-ink/20 hover:text-ink"
+            >
+              următoarea →
+            </Link>
+          ) : (
+            <span className="rounded-full border border-line px-3 py-1 font-medium text-faint opacity-50">
+              următoarea →
+            </span>
+          )}
+        </nav>
       )}
 
       {user?.isAdmin && <TaxonomyManager tags={managedTags} />}

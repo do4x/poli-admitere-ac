@@ -10,7 +10,7 @@ function first(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
-/** Re-serialize the current context params, forcing `from`, so "next" chains. */
+/** Re-serialize the current context params, forcing `from`, so navigation chains. */
 function carry(searchParams: SearchParams, from: string): string {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(searchParams)) {
@@ -21,24 +21,29 @@ function carry(searchParams: SearchParams, from: string): string {
   return params.toString();
 }
 
-export interface NextLink {
+export interface NeighborLink {
   href: string;
   scope: "exam" | "filter";
 }
 
+export interface Neighbors {
+  prev: NeighborLink | null;
+  next: NeighborLink | null;
+}
+
 /**
- * The problem that follows the current one, relative to where the user came
- * from (the `from` search param):
- *   - `probleme` → next in the same filtered/sorted /probleme list
- *   - anything else (incl. absent) → next in the same exam, by problem number
- * Returns null when the current problem is last, or can't be located.
+ * The problems immediately before and after the current one, relative to where
+ * the user came from (the `from` search param):
+ *   - `probleme` → siblings in the same filtered/sorted /probleme list
+ *   - anything else (incl. absent) → siblings in the same exam, by problem number
+ * Either side is null when the current problem is at that end of the list.
  */
-export async function resolveNext(
+export async function resolveNeighbors(
   currentId: string,
   examId: string,
   userId: string | undefined,
   searchParams: SearchParams,
-): Promise<NextLink | null> {
+): Promise<Neighbors> {
   if (first(searchParams.from) === "probleme") {
     const parsed = parseFilters(searchParams);
     const filters: ProblemFilters = {
@@ -54,22 +59,32 @@ export async function resolveNext(
       filters,
     );
     const idx = visible.findIndex((p) => p.id === currentId);
-    const next = idx >= 0 ? visible[idx + 1] : undefined;
-    if (!next) return null;
-    return {
-      href: `/problems/${next.id}?${carry(searchParams, "probleme")}`,
+    const query = carry(searchParams, "probleme");
+    const link = (id: string): NeighborLink => ({
+      href: `/problems/${id}?${query}`,
       scope: "filter",
+    });
+    if (idx < 0) return { prev: null, next: null };
+    return {
+      prev: idx > 0 ? link(visible[idx - 1].id) : null,
+      next: idx < visible.length - 1 ? link(visible[idx + 1].id) : null,
     };
   }
 
-  // Default: next within the same exam, in problem-number order.
+  // Default: siblings within the same exam, in problem-number order.
   const siblings = await prisma.problem.findMany({
     where: { examId },
     select: { id: true, number: true },
   });
   siblings.sort((a, b) => problemNumberCompare(a.number, b.number));
   const idx = siblings.findIndex((p) => p.id === currentId);
-  const next = idx >= 0 ? siblings[idx + 1] : undefined;
-  if (!next) return null;
-  return { href: `/problems/${next.id}?from=exam`, scope: "exam" };
+  const link = (id: string): NeighborLink => ({
+    href: `/problems/${id}?from=exam`,
+    scope: "exam",
+  });
+  if (idx < 0) return { prev: null, next: null };
+  return {
+    prev: idx > 0 ? link(siblings[idx - 1].id) : null,
+    next: idx < siblings.length - 1 ? link(siblings[idx + 1].id) : null,
+  };
 }

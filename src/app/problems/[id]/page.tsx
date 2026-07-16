@@ -6,7 +6,7 @@ import { prisma } from "@/lib/db";
 import { grilaCountsAsDone, solveState, type SolveState } from "@/lib/domain";
 import { examLabel, formatDateTime, solutionIsImage } from "@/lib/format";
 import { GrilaCheck } from "./GrilaCheck";
-import { resolveNext } from "./resolveNext";
+import { resolveNeighbors } from "./resolveNeighbors";
 import { TagEditor } from "./TagEditor";
 import { UploadForm } from "./UploadForm";
 
@@ -51,7 +51,12 @@ export default async function ProblemPage({
   });
   if (!problem) notFound();
 
-  const next = await resolveNext(problem.id, problem.examId, user?.id, sp);
+  const { prev, next } = await resolveNeighbors(
+    problem.id,
+    problem.examId,
+    user?.id,
+    sp,
+  );
 
   const subjectTags = await prisma.tag.findMany({
     where: { subject: problem.exam.subject },
@@ -87,19 +92,37 @@ export default async function ProblemPage({
           >
             ← {examLabel(problem.exam)}
           </Link>
-          {next && (
-            <Link
-              href={next.href}
-              title={
-                next.scope === "filter"
-                  ? "Următoarea din filtrul curent"
-                  : "Următoarea din examen"
-              }
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-line bg-card px-3 py-1.5 text-sm font-semibold text-brand shadow-soft transition-colors hover:border-brand hover:text-brand-700"
-            >
-              Următoarea problemă
-              <span aria-hidden>→</span>
-            </Link>
+          {(prev || next) && (
+            <div className="flex shrink-0 items-center gap-2">
+              {prev && (
+                <Link
+                  href={prev.href}
+                  title={
+                    prev.scope === "filter"
+                      ? "Problema anterioară din filtrul curent"
+                      : "Problema anterioară din examen"
+                  }
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-line bg-card px-3 py-1.5 text-sm font-semibold text-brand shadow-soft transition-colors hover:border-brand hover:text-brand-700"
+                >
+                  <span aria-hidden>←</span>
+                  Problema anterioară
+                </Link>
+              )}
+              {next && (
+                <Link
+                  href={next.href}
+                  title={
+                    next.scope === "filter"
+                      ? "Următoarea din filtrul curent"
+                      : "Următoarea din examen"
+                  }
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-line bg-card px-3 py-1.5 text-sm font-semibold text-brand shadow-soft transition-colors hover:border-brand hover:text-brand-700"
+                >
+                  Următoarea problemă
+                  <span aria-hidden>→</span>
+                </Link>
+              )}
+            </div>
           )}
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-3">

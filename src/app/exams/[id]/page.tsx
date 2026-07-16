@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Statement } from "@/components/Statement";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { examProgress, solveState, type SolveState } from "@/lib/domain";
@@ -113,9 +114,9 @@ export default async function ExamPage({
                 <span className="font-display w-12 shrink-0 font-bold">
                   {problem.number}
                 </span>
-                <span className="min-w-0 flex-1 truncate text-sm text-muted">
-                  {problem.latex}
-                </span>
+                <div className="min-w-0 flex-1 line-clamp-2 text-sm text-muted [&_.katex-display]:my-0 [&_.katex-display]:inline [&_.katex]:text-[0.95em] [&_p]:my-0 [&_p]:inline">
+                  <Statement latex={problem.latex} />
+                </div>
               </Link>
               <span className="shrink-0 text-xs text-faint tabular-nums">
                 {problem.solutions.length} sol.

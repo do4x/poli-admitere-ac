@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { CATALOG_TAG } from "@/app/probleme/query";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { computeReviewDueAt } from "@/lib/domain";
@@ -215,6 +216,13 @@ function revalidateProblem(problemId: string): void {
   revalidatePath("/probleme");
 }
 
+/** Tag edits change the shared catalog (grila attempts don't — those are
+ *  per-user rows fetched outside the cache). */
+function revalidateProblemTags(problemId: string): void {
+  revalidateTag(CATALOG_TAG);
+  revalidateProblem(problemId);
+}
+
 /** Attach an existing tag to a problem (from the dropdown). */
 export async function addTagAction(
   problemId: string,
@@ -255,7 +263,7 @@ export async function addTagAction(
     where: { id: problemId },
     data: { tags: { connect: { id: tag.id } } },
   });
-  revalidateProblem(problemId);
+  revalidateProblemTags(problemId);
   return { error: null };
 }
 
@@ -277,7 +285,7 @@ export async function removeTagFromProblem(
     where: { id: problemId },
     data: { tags: { disconnect: { id: tagId } } },
   });
-  revalidateProblem(problemId);
+  revalidateProblemTags(problemId);
 }
 
 /** Create a new tag (subject = the problem's subject) and attach it. */
@@ -321,6 +329,6 @@ export async function createTagAction(
     where: { id: problemId },
     data: { tags: { create: { subject, name } } },
   });
-  revalidateProblem(problemId);
+  revalidateProblemTags(problemId);
   return { error: null };
 }

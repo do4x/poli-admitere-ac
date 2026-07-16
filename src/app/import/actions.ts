@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { CATALOG_TAG } from "@/app/probleme/query";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { parseImportFile } from "@/lib/import/schema";
@@ -67,6 +68,7 @@ export async function commitImport(jsonText: string): Promise<CommitResult> {
     return { ok: false, error: parsed.error };
   }
   const result = await runImport(prisma, parsed.file);
+  revalidateTag(CATALOG_TAG);
   revalidatePath("/");
   revalidatePath("/exams");
   revalidatePath(`/exams/${result.examId}`);

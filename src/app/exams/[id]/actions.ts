@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { CATALOG_TAG } from "@/app/probleme/query";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
@@ -19,6 +20,7 @@ export async function toggleDepartajare(problemId: string): Promise<void> {
     data: { isDepartajare: !problem.isDepartajare },
   });
 
+  revalidateTag(CATALOG_TAG);
   revalidatePath("/");
   revalidatePath("/exams");
   revalidatePath(`/exams/${problem.examId}`);

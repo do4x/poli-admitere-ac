@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { fetchFilterableProblems } from "./probleme/query";
 import { Landing } from "./Landing";
 import {
   dueSolutions,
@@ -20,27 +21,22 @@ export default async function DashboardPage() {
 
   const now = new Date();
   const [problems, recentSolutions] = await Promise.all([
-    prisma.problem.findMany({
-      omit: { correctAnswer: true }, // the key never leaves the server actions
-      // Single joined query instead of one round-trip per relation — see
-      // src/app/probleme/query.ts for why this matters over the pooled
-      // connection.
-      relationLoadStrategy: "join",
-      include: {
-        exam: true,
-        solutions: { where: { userId: user.id } },
-        attempts: {
-          where: { userId: user.id },
-          select: { kind: true, correct: true },
-          orderBy: { createdAt: "asc" },
-        },
-      },
-    }),
+    // Cached catalog + the user's own solve-state rows — see
+    // src/app/probleme/query.ts. The old per-render full-table pull (all
+    // latex included, never displayed here) was ~87KB of Supabase egress
+    // per dashboard visit.
+    fetchFilterableProblems(user.id),
     prisma.solution.findMany({
       where: { userId: user.id },
       orderBy: { submittedAt: "desc" },
       take: 8,
-      include: { problem: { include: { exam: true } } },
+      select: {
+        id: true,
+        problemId: true,
+        submittedAt: true,
+        aiAssisted: true,
+        problem: { select: { number: true, exam: true } },
+      },
     }),
   ]);
 

@@ -1,9 +1,10 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import type { Subject } from "@prisma/client";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { CATALOG_TAG } from "./query";
 
 const TAG_NAME_MAX = 60;
 const NOT_ADMIN = "Doar administratorul poate modifica taxonomia.";
@@ -13,6 +14,7 @@ export interface TaxonomyActionState {
 }
 
 function revalidateTaxonomy(): void {
+  revalidateTag(CATALOG_TAG); // tag names live in the cached catalog
   revalidatePath("/probleme");
 }
 

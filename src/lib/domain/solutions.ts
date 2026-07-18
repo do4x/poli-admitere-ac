@@ -1,5 +1,6 @@
-/** Rule 4: an AI-assisted solution must be re-solved independently 4 days later. */
-export const REVIEW_DELAY_MS = 4 * 24 * 60 * 60 * 1000;
+/** Rule 4 (owner revision 2026-07-18): anything solved with AI must be
+ *  re-solved independently 72 hours later — down from the original 4 days. */
+export const REVIEW_DELAY_MS = 72 * 60 * 60 * 1000;
 
 /** Rule 1: independent = not AI-assisted. */
 export function isIndependent(solution: { aiAssisted: boolean }): boolean {
@@ -13,9 +14,7 @@ export function hasIndependentSolution(problem: {
   return problem.solutions.some(isIndependent);
 }
 
-export function computeReviewDueAt(
-  submittedAt: Date,
-  aiAssisted: boolean,
-): Date | null {
-  return aiAssisted ? new Date(submittedAt.getTime() + REVIEW_DELAY_MS) : null;
+/** When a fresh AI mark's re-solve window closes. */
+export function computeAiDueAt(markedAt: Date): Date {
+  return new Date(markedAt.getTime() + REVIEW_DELAY_MS);
 }

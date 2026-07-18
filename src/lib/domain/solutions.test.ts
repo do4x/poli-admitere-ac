@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   REVIEW_DELAY_MS,
-  computeReviewDueAt,
+  computeAiDueAt,
   hasIndependentSolution,
   isIndependent,
 } from "./solutions";
@@ -38,21 +38,16 @@ describe("hasIndependentSolution (rule 2)", () => {
   });
 });
 
-describe("computeReviewDueAt (rule 4)", () => {
-  const submittedAt = new Date("2026-03-10T14:30:00.000Z");
+describe("computeAiDueAt (rule 4, 72h revision 2026-07-18)", () => {
+  const markedAt = new Date("2026-03-10T14:30:00.000Z");
 
-  it("is null for an independent solution", () => {
-    expect(computeReviewDueAt(submittedAt, false)).toBeNull();
+  it("is exactly 72 hours after the mark", () => {
+    const due = computeAiDueAt(markedAt);
+    expect(due.getTime() - markedAt.getTime()).toBe(72 * 60 * 60 * 1000);
+    expect(due.toISOString()).toBe("2026-03-13T14:30:00.000Z");
   });
 
-  it("is exactly 96 hours after submission for an AI-assisted solution", () => {
-    const due = computeReviewDueAt(submittedAt, true);
-    expect(due).not.toBeNull();
-    expect(due!.getTime() - submittedAt.getTime()).toBe(96 * 60 * 60 * 1000);
-    expect(due!.toISOString()).toBe("2026-03-14T14:30:00.000Z");
-  });
-
-  it("REVIEW_DELAY_MS is exactly 4 days", () => {
-    expect(REVIEW_DELAY_MS).toBe(4 * 24 * 60 * 60 * 1000);
+  it("REVIEW_DELAY_MS is exactly 3 days", () => {
+    expect(REVIEW_DELAY_MS).toBe(3 * 24 * 60 * 60 * 1000);
   });
 });

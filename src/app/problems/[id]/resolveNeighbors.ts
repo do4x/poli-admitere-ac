@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { selectVisible, type ProblemFilters } from "@/lib/domain";
 import { problemNumberCompare } from "@/lib/format";
+import { problemHref, type SlugExam } from "@/lib/slug";
 import { fetchFilterableProblems } from "@/app/probleme/query";
 import { parseFilters } from "@/app/probleme/searchFilters";
 
@@ -40,7 +41,7 @@ export interface Neighbors {
  */
 export async function resolveNeighbors(
   currentId: string,
-  examId: string,
+  exam: { id: string } & SlugExam,
   userId: string | undefined,
   searchParams: SearchParams,
 ): Promise<Neighbors> {
@@ -60,31 +61,31 @@ export async function resolveNeighbors(
     );
     const idx = visible.findIndex((p) => p.id === currentId);
     const query = carry(searchParams, "probleme");
-    const link = (id: string): NeighborLink => ({
-      href: `/problems/${id}?${query}`,
+    const link = (p: (typeof visible)[number]): NeighborLink => ({
+      href: problemHref(p, query),
       scope: "filter",
     });
     if (idx < 0) return { prev: null, next: null };
     return {
-      prev: idx > 0 ? link(visible[idx - 1].id) : null,
-      next: idx < visible.length - 1 ? link(visible[idx + 1].id) : null,
+      prev: idx > 0 ? link(visible[idx - 1]) : null,
+      next: idx < visible.length - 1 ? link(visible[idx + 1]) : null,
     };
   }
 
   // Default: siblings within the same exam, in problem-number order.
   const siblings = await prisma.problem.findMany({
-    where: { examId },
+    where: { examId: exam.id },
     select: { id: true, number: true },
   });
   siblings.sort((a, b) => problemNumberCompare(a.number, b.number));
   const idx = siblings.findIndex((p) => p.id === currentId);
-  const link = (id: string): NeighborLink => ({
-    href: `/problems/${id}?from=exam`,
+  const link = (p: { number: string }): NeighborLink => ({
+    href: problemHref({ number: p.number, exam }, "from=exam"),
     scope: "exam",
   });
   if (idx < 0) return { prev: null, next: null };
   return {
-    prev: idx > 0 ? link(siblings[idx - 1].id) : null,
-    next: idx < siblings.length - 1 ? link(siblings[idx + 1].id) : null,
+    prev: idx > 0 ? link(siblings[idx - 1]) : null,
+    next: idx < siblings.length - 1 ? link(siblings[idx + 1]) : null,
   };
 }

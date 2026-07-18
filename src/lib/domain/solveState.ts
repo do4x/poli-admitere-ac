@@ -1,3 +1,4 @@
+import { aiPhase, type AiMarkLike } from "./aiMark";
 import { isIndependent } from "./solutions";
 
 /** The four solve states a problem can be in, for filtering on /probleme. */
@@ -10,25 +11,38 @@ export interface AttemptLike {
 }
 
 /**
- * Derive a problem's solve state (business rules 1–2 + grila ladder):
- * - ≥1 independent solution        → "singur" (done — the only state that
- *                                     satisfies the departajare counter)
- * - solutions exist, none indep.   → "doar_ai"
+ * Derive a problem's solve state (business rules 1–2 + grila ladder + the
+ * 2026-07-18 AI-mark rules):
+ * - ≥1 independent solution        → "singur" (done)
+ * - AI mark redeemed               → "singur" when an uploaded solution backs
+ *                                     it ("the initial submission reappears"),
+ *                                     otherwise "grila" (rezolvat pe grilă)
+ * - AI mark inside its 72h window  → "doar_ai"
+ * - AI mark past due, unredeemed   → "nerezolvata" (the reset — de refăcut)
+ * - AI solutions, no mark (legacy) → "doar_ai"
  * - correct grila answer submitted
  *   BEFORE any reveal              → "grila" (self-checked, no written proof)
  * - otherwise                      → "nerezolvata"
  *
  * A REVEAL taints all later attempts: once the key was seen, a correct
  * choice no longer demonstrates anything. Attempts must be passed in
- * chronological order.
+ * chronological order. Redemption itself is stamped server-side at answer
+ * time, so no attempt timestamps are needed here.
  */
 export function solveState(
   solutions: readonly { aiAssisted: boolean }[],
   attempts: readonly AttemptLike[] = [],
+  aiMark: AiMarkLike | null = null,
+  now: Date = new Date(),
 ): SolveState {
-  if (solutions.length > 0) {
-    return solutions.some(isIndependent) ? "singur" : "doar_ai";
-  }
+  if (solutions.some(isIndependent)) return "singur";
+
+  const phase = aiPhase(aiMark, now);
+  if (phase === "redeemed") return solutions.length > 0 ? "singur" : "grila";
+  if (phase === "window") return "doar_ai";
+  if (phase === "due") return "nerezolvata";
+  if (solutions.length > 0) return "doar_ai";
+
   let revealed = false;
   for (const attempt of attempts) {
     if (attempt.kind === "REVEAL") {
@@ -49,7 +63,8 @@ export const GRILA_MAX_TRIES = 2;
  * `maxTries` choices. Guessing your way to green in 3+ tries keeps the
  * "grila" status but does NOT count as done — the counter stays put.
  * Attempts must be passed in chronological order; REVEAL taints everything
- * after it, same as in `solveState`.
+ * after it, same as in `solveState`. (Grila redemption of an AI mark is
+ * exempt from the try limit — see `isDone`.)
  */
 export function grilaCountsAsDone(
   attempts: readonly AttemptLike[],

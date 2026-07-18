@@ -4,13 +4,14 @@ import { prisma } from "@/lib/db";
 import { fetchFilterableProblems } from "./probleme/query";
 import { Landing } from "./Landing";
 import {
-  dueSolutions,
+  dueProblems,
   examProgress,
   grilaCountsAsDone,
   remainingCount,
   solveState,
 } from "@/lib/domain";
 import { examLabel, formatDateTime } from "@/lib/format";
+import { problemHref } from "@/lib/slug";
 
 export const dynamic = "force-dynamic";
 
@@ -40,16 +41,18 @@ export default async function DashboardPage() {
     }),
   ]);
 
-  const remaining = remainingCount(problems);
+  const remaining = remainingCount(problems, now);
   const totalDepartajare = problems.filter((p) => p.isDepartajare).length;
   const doneDepartajare = totalDepartajare - remaining;
   const grilaProblems = problems.filter(
     (p) =>
-      p.isDepartajare && solveState(p.solutions, p.attempts) === "grila",
+      p.isDepartajare &&
+      solveState(p.solutions, p.attempts, p.aiMark, now) === "grila",
   );
-  // Only 1st/2nd-try checks count as done; 3+ tries = guessed, still remaining.
-  const grilaVerified = grilaProblems.filter((p) =>
-    grilaCountsAsDone(p.attempts),
+  // 1st/2nd-try checks count as done; so does redeeming an AI mark after its
+  // 72h window. 3+ tries without a mark = guessed, still remaining.
+  const grilaVerified = grilaProblems.filter(
+    (p) => grilaCountsAsDone(p.attempts) || p.aiMark?.redeemedAt != null,
   ).length;
   const grilaGuessed = grilaProblems.length - grilaVerified;
   const percentDone =
@@ -57,21 +60,11 @@ export default async function DashboardPage() {
       ? 0
       : Math.round((doneDepartajare / totalDepartajare) * 100);
 
-  const dueByProblem = new Map<
-    string,
-    { problem: (typeof problems)[number]; dueAt: Date }
-  >();
-  for (const item of dueSolutions(problems, now)) {
-    const dueAt = item.solution.reviewDueAt;
-    if (dueAt === null) continue;
-    const current = dueByProblem.get(item.problem.id);
-    if (!current || dueAt < current.dueAt) {
-      dueByProblem.set(item.problem.id, { problem: item.problem, dueAt });
-    }
-  }
-  const dueQueue = [...dueByProblem.values()].sort(
-    (a, b) => a.dueAt.getTime() - b.dueAt.getTime(),
-  );
+  const dueQueue = dueProblems(problems, now)
+    .flatMap((problem) =>
+      problem.aiMark ? [{ problem, dueAt: problem.aiMark.dueAt }] : [],
+    )
+    .sort((a, b) => a.dueAt.getTime() - b.dueAt.getTime());
 
   const years = [...new Set(problems.map((p) => p.exam.year))].sort(
     (a, b) => b - a,
@@ -93,7 +86,7 @@ export default async function DashboardPage() {
             {dueQueue.map(({ problem, dueAt }) => (
               <li key={problem.id}>
                 <Link
-                  href={`/problems/${problem.id}`}
+                  href={problemHref(problem)}
                   className="flex items-baseline justify-between px-5 py-2.5 text-sm transition-colors hover:bg-rose-100/60"
                 >
                   <span className="font-medium text-rose-900">
@@ -176,7 +169,7 @@ export default async function DashboardPage() {
           <ul className="space-y-3.5">
             {years.map((year) => {
               const yearProblems = problems.filter((p) => p.exam.year === year);
-              const progress = examProgress(yearProblems);
+              const progress = examProgress(yearProblems, now);
               const percent =
                 progress.total === 0
                   ? 0
@@ -216,7 +209,7 @@ export default async function DashboardPage() {
             {recentSolutions.map((solution) => (
               <li key={solution.id}>
                 <Link
-                  href={`/problems/${solution.problemId}`}
+                  href={problemHref(solution.problem)}
                   className="flex items-center gap-3 rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-surface"
                 >
                   <time className="shrink-0 tabular-nums text-xs text-faint">

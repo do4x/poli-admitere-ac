@@ -21,7 +21,14 @@ const LINKS: {
   { href: "/cont", label: "Cont", requires: "user" },
 ];
 
-export function Nav({ user }: { user: NavUser | null }) {
+export function Nav({
+  user,
+  redoCount = 0,
+}: {
+  user: NavUser | null;
+  /** Problems whose AI mark passed its 72h window — badge on "Cont". */
+  redoCount?: number;
+}) {
   const pathname = usePathname();
 
   const visible = LINKS.filter((link) =>
@@ -38,18 +45,30 @@ export function Nav({ user }: { user: NavUser | null }) {
         const active = link.exact
           ? pathname === link.href
           : pathname.startsWith(link.href);
+        const href =
+          link.href === "/cont" && redoCount > 0
+            ? "/cont#de-refacut"
+            : link.href;
         return (
           <Link
             key={link.href}
-            href={link.href}
+            href={href}
             aria-current={active ? "page" : undefined}
-            className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
               active
                 ? "bg-brand-50 text-brand-700"
                 : "text-muted hover:bg-line/60 hover:text-ink"
             }`}
           >
             {link.label}
+            {link.href === "/cont" && redoCount > 0 && (
+              <span
+                title={`${redoCount} probleme de refăcut singur`}
+                className="flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold leading-none text-white"
+              >
+                {redoCount}
+              </span>
+            )}
           </Link>
         );
       })}

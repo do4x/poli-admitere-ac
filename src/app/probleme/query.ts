@@ -1,6 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/db";
-import type { AttemptLike } from "@/lib/domain";
+import type { AiMarkLike, AttemptLike } from "@/lib/domain";
 
 /**
  * Cache tag for the shared problem catalog. Every admin mutation that changes
@@ -53,13 +53,17 @@ export type CatalogProblem = Awaited<ReturnType<typeof fetchCatalog>>[number];
 
 export interface UserSolution {
   aiAssisted: boolean;
-  reviewDueAt: Date | null;
-  notifiedAt: Date | null;
+}
+
+export interface UserAiMark extends AiMarkLike {
+  dueAt: Date;
+  redeemedAt: Date | null;
 }
 
 export interface UserState {
   solutions: Map<string, UserSolution[]>;
   attempts: Map<string, AttemptLike[]>;
+  aiMarks: Map<string, UserAiMark>;
 }
 
 /** The current user's solve-state rows, grouped by problem id. Anonymous
@@ -67,22 +71,22 @@ export interface UserState {
 async function fetchUserState(userId: string | undefined): Promise<UserState> {
   const solutions = new Map<string, UserSolution[]>();
   const attempts = new Map<string, AttemptLike[]>();
-  if (!userId) return { solutions, attempts };
+  const aiMarks = new Map<string, UserAiMark>();
+  if (!userId) return { solutions, attempts, aiMarks };
 
-  const [solutionRows, attemptRows] = await Promise.all([
+  const [solutionRows, attemptRows, markRows] = await Promise.all([
     prisma.solution.findMany({
       where: { userId },
-      select: {
-        problemId: true,
-        aiAssisted: true,
-        reviewDueAt: true,
-        notifiedAt: true,
-      },
+      select: { problemId: true, aiAssisted: true },
     }),
     prisma.answerAttempt.findMany({
       where: { userId },
       select: { problemId: true, kind: true, correct: true },
       orderBy: { createdAt: "asc" },
+    }),
+    prisma.aiMark.findMany({
+      where: { userId },
+      select: { problemId: true, dueAt: true, redeemedAt: true },
     }),
   ]);
 
@@ -92,7 +96,10 @@ async function fetchUserState(userId: string | undefined): Promise<UserState> {
   for (const { problemId, ...attempt } of attemptRows) {
     groupInto(attempts, problemId, attempt);
   }
-  return { solutions, attempts };
+  for (const { problemId, ...mark } of markRows) {
+    aiMarks.set(problemId, mark);
+  }
+  return { solutions, attempts, aiMarks };
 }
 
 function groupInto<T>(map: Map<string, T[]>, key: string, value: T): void {
@@ -108,6 +115,7 @@ function groupInto<T>(map: Map<string, T[]>, key: string, value: T): void {
 export type ProblemWithUserState = CatalogProblem & {
   solutions: UserSolution[];
   attempts: AttemptLike[];
+  aiMark: UserAiMark | null;
 };
 
 /**
@@ -128,5 +136,6 @@ export async function fetchFilterableProblems(
     ...problem,
     solutions: user.solutions.get(problem.id) ?? [],
     attempts: user.attempts.get(problem.id) ?? [],
+    aiMark: user.aiMarks.get(problem.id) ?? null,
   }));
 }

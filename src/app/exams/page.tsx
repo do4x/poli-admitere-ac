@@ -29,10 +29,15 @@ export default async function ExamsPage() {
             select: { kind: true, correct: true },
             orderBy: { createdAt: "asc" },
           },
+          aiMarks: {
+            where: { userId: user?.id ?? "" },
+            select: { dueAt: true, redeemedAt: true },
+          },
         },
       },
     },
   });
+  const now = new Date();
 
   const byCell = new Map<string, typeof exams>();
   for (const exam of exams) {
@@ -85,7 +90,13 @@ export default async function ExamsPage() {
                       ) : (
                         <ul className="space-y-1">
                           {cell.map((exam) => {
-                            const progress = examProgress(exam.problems);
+                            const progress = examProgress(
+                              exam.problems.map((p) => ({
+                                ...p,
+                                aiMark: p.aiMarks[0] ?? null,
+                              })),
+                              now,
+                            );
                             const done =
                               progress.total > 0 &&
                               progress.done === progress.total;

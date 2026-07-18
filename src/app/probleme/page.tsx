@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Statement } from "@/components/Statement";
 import { prisma } from "@/lib/db";
 import {
+  aiPhase,
   selectVisible,
   solveState,
   tagCounts,
@@ -10,6 +11,7 @@ import {
 } from "@/lib/domain";
 import { getSessionUser } from "@/lib/auth";
 import { examLabel } from "@/lib/format";
+import { problemHref } from "@/lib/slug";
 import { FilterBar } from "./FilterBar";
 import { TaxonomyManager } from "./TaxonomyManager";
 import { fetchFilterableProblems } from "./query";
@@ -75,7 +77,8 @@ export default async function ProblemePage({
     departajareOnly: !parsed.toate,
   };
 
-  const visible = selectVisible(problems, domainFilters);
+  const now = new Date();
+  const visible = selectVisible(problems, domainFilters, now);
 
   const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
   const page = Math.min(parsePage(params), totalPages);
@@ -136,14 +139,20 @@ export default async function ProblemePage({
       ) : (
         <ul className="space-y-3">
           {pageItems.map((problem) => {
-            const status = STATUS[solveState(problem.solutions, problem.attempts)];
+            const status =
+              STATUS[
+                solveState(
+                  problem.solutions,
+                  problem.attempts,
+                  problem.aiMark,
+                  now,
+                )
+              ];
+            const due = aiPhase(problem.aiMark, now) === "due";
             const spine = SUBJECT_SPINE[problem.exam.subject] ?? "bg-stone-400";
             return (
               <li key={problem.id}>
-                <Link
-                  href={`/problems/${problem.id}?${ctxQuery}`}
-                  className="block"
-                >
+                <Link href={problemHref(problem, ctxQuery)} className="block">
                   <article
                     className={`relative overflow-hidden rounded-2xl border-2 bg-card py-4 pl-6 pr-4 shadow-soft transition-all hover:-translate-y-0.5 hover:shadow-lift ${status.border}`}
                   >
@@ -171,6 +180,11 @@ export default async function ProblemePage({
                         >
                           {status.label}
                         </span>
+                        {due && (
+                          <span className="rounded-full border border-rose-500 bg-rose-50 px-2 py-0.5 text-[10px] font-bold uppercase text-rose-700">
+                            de refăcut — AI
+                          </span>
+                        )}
                         {problem.tags.length > 0 && (
                           <div className="flex max-w-[13rem] flex-wrap justify-end gap-1">
                             {problem.tags.map((tag) => (

@@ -172,3 +172,76 @@ describe("grila counts as progress (owner decision 2026-07-15)", () => {
     ).toEqual({ done: 2, total: 3 });
   });
 });
+
+describe("AI marks and the counter (owner revision 2026-07-18)", () => {
+  const NOW = new Date("2026-04-10T09:00:00.000Z");
+  const PAST = new Date("2026-04-09T09:00:00.000Z");
+  const FUTURE = new Date("2026-04-11T09:00:00.000Z");
+  const correct = { kind: "CHOICE", correct: true } as const;
+  const wrong = { kind: "CHOICE", correct: false } as const;
+
+  it("a mark alone never counts as done — window open or passed", () => {
+    expect(
+      isDone(
+        {
+          isDepartajare: true,
+          solutions: [],
+          aiMark: { dueAt: FUTURE, redeemedAt: null },
+        },
+        NOW,
+      ),
+    ).toBe(false);
+    expect(
+      isDone(
+        {
+          isDepartajare: true,
+          solutions: [aiAssisted],
+          aiMark: { dueAt: PAST, redeemedAt: null },
+        },
+        NOW,
+      ),
+    ).toBe(false);
+  });
+
+  it("a redeemed mark with an AI upload counts as done (singur)", () => {
+    expect(
+      isDone(
+        {
+          isDepartajare: true,
+          solutions: [aiAssisted],
+          aiMark: { dueAt: PAST, redeemedAt: NOW },
+        },
+        NOW,
+      ),
+    ).toBe(true);
+  });
+
+  it("grila redemption counts regardless of the number of tries", () => {
+    expect(
+      isDone(
+        {
+          isDepartajare: true,
+          solutions: [],
+          attempts: [wrong, wrong, wrong, correct], // 4 tries — still counts
+          aiMark: { dueAt: PAST, redeemedAt: NOW },
+        },
+        NOW,
+      ),
+    ).toBe(true);
+  });
+
+  it("remainingCount reflects a reset mark", () => {
+    expect(
+      remainingCount(
+        [
+          {
+            isDepartajare: true,
+            solutions: [aiAssisted],
+            aiMark: { dueAt: PAST, redeemedAt: null },
+          },
+        ],
+        NOW,
+      ),
+    ).toBe(1);
+  });
+});

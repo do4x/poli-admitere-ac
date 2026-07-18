@@ -4,7 +4,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { CATALOG_TAG } from "@/app/probleme/query";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { computeReviewDueAt } from "@/lib/domain";
+import { computeAiDueAt } from "@/lib/domain";
 import {
   MAX_SOLUTION_BYTES,
   QUOTA_MAX_BYTES,
@@ -103,7 +103,6 @@ export async function uploadSolution(
         sizeBytes: bytes.length,
         submittedAt,
         aiAssisted,
-        reviewDueAt: computeReviewDueAt(submittedAt, aiAssisted),
       },
     });
   } catch (error) {
@@ -116,10 +115,145 @@ export async function uploadSolution(
     };
   }
 
+  if (aiAssisted) {
+    // An AI upload opens (or joins) the 72h re-solve window. An existing mark
+    // keeps its original clock — re-uploading never postpones the deadline.
+    await prisma.aiMark.upsert({
+      where: {
+        problemId_userId: { problemId: problem.id, userId: user.id },
+      },
+      create: {
+        problemId: problem.id,
+        userId: user.id,
+        markedAt: submittedAt,
+        dueAt: computeAiDueAt(submittedAt),
+      },
+      update: {},
+    });
+  } else {
+    // An independent upload settles any open AI mark for good.
+    await prisma.aiMark.updateMany({
+      where: { problemId: problem.id, userId: user.id, redeemedAt: null },
+      data: { redeemedAt: submittedAt },
+    });
+  }
+
   revalidatePath("/");
   revalidatePath("/exams");
+  revalidatePath("/cont");
   revalidatePath(`/problems/${problem.id}`);
   return { error: null, uploadedAt: submittedAt.getTime() };
+}
+
+export interface AiMarkState {
+  error: string | null;
+}
+
+/** "Am rezolvat cu AI" without an upload: opens the 72h re-solve window. */
+export async function markAiAction(
+  problemId: string,
+  _previous: AiMarkState,
+): Promise<AiMarkState> {
+  const user = await getSessionUser();
+  if (!user) return { error: "Autentificare necesară." };
+
+  const problem = await prisma.problem.findUnique({
+    where: { id: problemId },
+    select: { id: true },
+  });
+  if (!problem) return { error: "Problema nu există." };
+
+  const markedAt = new Date();
+  await prisma.aiMark.upsert({
+    where: { problemId_userId: { problemId, userId: user.id } },
+    create: {
+      problemId,
+      userId: user.id,
+      markedAt,
+      dueAt: computeAiDueAt(markedAt),
+    },
+    update: {}, // already marked — the original clock stands
+  });
+
+  revalidatePath("/");
+  revalidatePath("/cont");
+  revalidateProblem(problemId);
+  return { error: null };
+}
+
+/**
+ * Undo an accidental AI mark — allowed only while the window is still open
+ * and no AI-assisted upload backs the mark. Past dueAt the reset is a
+ * commitment, not a preference.
+ */
+export async function unmarkAiAction(
+  problemId: string,
+  _previous: AiMarkState,
+): Promise<AiMarkState> {
+  const user = await getSessionUser();
+  if (!user) return { error: "Autentificare necesară." };
+
+  const mark = await prisma.aiMark.findUnique({
+    where: { problemId_userId: { problemId, userId: user.id } },
+    select: { id: true, dueAt: true, redeemedAt: true },
+  });
+  if (!mark) return { error: null };
+  if (mark.redeemedAt !== null || mark.dueAt.getTime() <= Date.now()) {
+    return { error: "Termenul a trecut — rezolv-o singur ca să conteze." };
+  }
+
+  const aiUploads = await prisma.solution.count({
+    where: { problemId, userId: user.id, aiAssisted: true },
+  });
+  if (aiUploads > 0) {
+    return {
+      error: "Există o rezolvare încărcată cu AI — marcajul nu se poate anula.",
+    };
+  }
+
+  await prisma.aiMark.delete({ where: { id: mark.id } });
+
+  revalidatePath("/");
+  revalidatePath("/cont");
+  revalidateProblem(problemId);
+  return { error: null };
+}
+
+export interface DeleteSolutionState {
+  error: string | null;
+}
+
+/** Delete one of the caller's own solutions: DB row first (source of truth
+ *  for quota and solve state), then the Storage object — an orphaned file is
+ *  recoverable, a dangling DB row is not. */
+export async function deleteSolutionAction(
+  solutionId: string,
+  _previous: DeleteSolutionState,
+): Promise<DeleteSolutionState> {
+  const user = await getSessionUser();
+  if (!user) {
+    return { error: "Autentificare necesară." };
+  }
+
+  const solution = await prisma.solution.findUnique({
+    where: { id: solutionId },
+    select: { id: true, userId: true, problemId: true, pdfPath: true },
+  });
+  if (!solution || solution.userId !== user.id) {
+    return { error: "Soluția nu există." };
+  }
+
+  await prisma.solution.delete({ where: { id: solution.id } });
+  try {
+    await removeSolutionFile(solution.pdfPath);
+  } catch (error) {
+    console.error("[departaj] Ștergerea fișierului din Storage a eșuat:", error);
+  }
+
+  revalidatePath("/");
+  revalidatePath("/cont");
+  revalidatePath(`/problems/${solution.problemId}`);
+  return { error: null };
 }
 
 const MAX_TAGS = 3;
@@ -175,9 +309,35 @@ export async function submitAnswerAction(
   }
 
   const correct = choice === problem.correctAnswer;
+  const answeredAt = new Date();
   await prisma.answerAttempt.create({
     data: { problemId, userId: user.id, kind: "CHOICE", choice, correct },
   });
+
+  if (correct) {
+    // Redemption: a correct answer AFTER the 72h window closes settles the AI
+    // mark — any number of tries, but never once the key was revealed.
+    const mark = await prisma.aiMark.findUnique({
+      where: { problemId_userId: { problemId, userId: user.id } },
+      select: { id: true, dueAt: true, redeemedAt: true },
+    });
+    if (
+      mark &&
+      mark.redeemedAt === null &&
+      mark.dueAt.getTime() <= answeredAt.getTime()
+    ) {
+      const reveals = await prisma.answerAttempt.count({
+        where: { problemId, userId: user.id, kind: "REVEAL" },
+      });
+      if (reveals === 0) {
+        await prisma.aiMark.update({
+          where: { id: mark.id },
+          data: { redeemedAt: answeredAt },
+        });
+        revalidatePath("/cont");
+      }
+    }
+  }
 
   revalidateProblem(problemId);
   revalidatePath("/");

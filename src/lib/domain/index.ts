@@ -1,8 +1,9 @@
+export { aiPhase, type AiMarkLike, type AiPhase } from "./aiMark";
 export {
   REVIEW_DELAY_MS,
   isIndependent,
   hasIndependentSolution,
-  computeReviewDueAt,
+  computeAiDueAt,
 } from "./solutions";
 export {
   isDone,
@@ -12,10 +13,10 @@ export {
   type ExamProgress,
 } from "./progress";
 export {
-  dueSolutions,
+  dueProblems,
   unnotified,
-  type DueSolutionInput,
-  type DueItem,
+  type DueMarkInput,
+  type DueProblemInput,
 } from "./dueQueue";
 export {
   GRILA_MAX_TRIES,

@@ -9,8 +9,8 @@ export interface DueReviewRunSummary {
 }
 
 /**
- * Production wiring for checkDueReviews, per user: each user with pending
- * AI-assisted solutions gets ONE digest to their own email. The engine's
+ * Production wiring for checkDueReviews, per user: each user with AI marks
+ * past their 72h window gets ONE digest to their own email. The engine's
  * notifiedAt dedupe is unchanged.
  */
 export async function runDueReviewChecks(): Promise<DueReviewRunSummary> {
@@ -21,12 +21,13 @@ export async function runDueReviewChecks(): Promise<DueReviewRunSummary> {
     return { usersChecked: 0, digestsSent: 0 };
   }
 
-  // Cheap pre-filter; dueSolutions() inside the engine makes the real call
-  // (due date reached, no independent solution, not yet notified).
+  const now = new Date();
+  // Cheap pre-filter; dueProblems() inside the engine makes the real call
+  // (window passed, unredeemed, no independent solution, not yet notified).
   const users = await prisma.user.findMany({
     where: {
-      solutions: {
-        some: { aiAssisted: true, reviewDueAt: { not: null }, notifiedAt: null },
+      aiMarks: {
+        some: { notifiedAt: null, redeemedAt: null, dueAt: { lte: now } },
       },
     },
     select: { id: true, email: true },
@@ -40,9 +41,9 @@ export async function runDueReviewChecks(): Promise<DueReviewRunSummary> {
       const result = await checkDueReviews({
         now: () => new Date(),
         baseUrl: siteUrl(),
-        loadProblems: () =>
-          prisma.problem.findMany({
-            where: { solutions: { some: { aiAssisted: true, userId: user.id } } },
+        loadProblems: async () => {
+          const problems = await prisma.problem.findMany({
+            where: { aiMarks: { some: { userId: user.id } } },
             select: {
               id: true,
               number: true,
@@ -51,19 +52,28 @@ export async function runDueReviewChecks(): Promise<DueReviewRunSummary> {
               },
               solutions: {
                 where: { userId: user.id },
+                select: { aiAssisted: true },
+              },
+              aiMarks: {
+                where: { userId: user.id },
                 select: {
                   id: true,
-                  aiAssisted: true,
-                  reviewDueAt: true,
+                  dueAt: true,
+                  redeemedAt: true,
                   notifiedAt: true,
                 },
               },
             },
-          }),
+          });
+          return problems.map(({ aiMarks, ...problem }) => ({
+            ...problem,
+            aiMark: aiMarks[0] ?? null,
+          }));
+        },
         send,
-        stampNotified: async (solutionIds, at) => {
-          await prisma.solution.updateMany({
-            where: { id: { in: solutionIds }, userId: user.id },
+        stampNotified: async (markIds, at) => {
+          await prisma.aiMark.updateMany({
+            where: { id: { in: markIds }, userId: user.id },
             data: { notifiedAt: at },
           });
         },

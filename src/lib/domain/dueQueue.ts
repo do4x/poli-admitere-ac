@@ -1,40 +1,40 @@
 import { hasIndependentSolution } from "./solutions";
 
-export interface DueSolutionInput {
-  aiAssisted: boolean;
-  reviewDueAt: Date | null;
-  notifiedAt: Date | null;
+/** An AI mark reduced to what the due queue and digest need. notifiedAt only
+ *  matters to `unnotified`; callers that never touch the digest may omit it. */
+export interface DueMarkInput {
+  dueAt: Date;
+  redeemedAt: Date | null;
+  notifiedAt?: Date | null;
 }
 
-export interface DueItem<P, S> {
-  problem: P;
-  solution: S;
+export interface DueProblemInput {
+  solutions: readonly { aiAssisted: boolean }[];
+  aiMark: DueMarkInput | null;
 }
 
 /**
- * Rule 5: the due queue — AI-assisted solutions with reviewDueAt <= now, on
- * problems that still have no independent solution. An independent solution
- * clears the problem from the queue permanently.
+ * Rule 5 (2026-07-18 revision): the due queue — AI marks past their 72h
+ * window, on problems that still have no independent solution and were not
+ * redeemed via grila. Redemption (stamped server-side) or an independent
+ * upload clears the problem from the queue permanently.
  */
-export function dueSolutions<
-  P extends { solutions: readonly DueSolutionInput[] },
->(problems: readonly P[], now: Date): DueItem<P, P["solutions"][number]>[] {
-  const items: DueItem<P, P["solutions"][number]>[] = [];
-  for (const problem of problems) {
-    if (hasIndependentSolution(problem)) continue;
-    for (const solution of problem.solutions) {
-      if (!solution.aiAssisted) continue;
-      if (solution.reviewDueAt === null) continue;
-      if (solution.reviewDueAt.getTime() > now.getTime()) continue;
-      items.push({ problem, solution });
-    }
-  }
-  return items;
+export function dueProblems<P extends DueProblemInput>(
+  problems: readonly P[],
+  now: Date,
+): P[] {
+  return problems.filter(
+    (p) =>
+      p.aiMark !== null &&
+      p.aiMark.redeemedAt === null &&
+      p.aiMark.dueAt.getTime() <= now.getTime() &&
+      !hasIndependentSolution(p),
+  );
 }
 
-/** Digest candidates: due items whose review email was never sent. */
-export function unnotified<S extends DueSolutionInput, P>(
-  items: readonly DueItem<P, S>[],
-): DueItem<P, S>[] {
-  return items.filter((item) => item.solution.notifiedAt === null);
+/** Digest candidates: due problems whose review email was never sent. */
+export function unnotified<P extends { aiMark: DueMarkInput | null }>(
+  problems: readonly P[],
+): P[] {
+  return problems.filter((p) => p.aiMark != null && p.aiMark.notifiedAt == null);
 }

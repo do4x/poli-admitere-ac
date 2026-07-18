@@ -16,6 +16,7 @@ model User {
   createdAt DateTime        @default(now())
   solutions Solution[]
   attempts  AnswerAttempt[]
+  aiMarks   AiMark[]
 }
 
 enum ExamKind {
@@ -52,10 +53,31 @@ model Problem {
   correctAnswer String?
   solutions     Solution[]
   attempts      AnswerAttempt[]
+  aiMarks       AiMark[]
   tags          Tag[]
   createdAt     DateTime        @default(now())
 
   @@unique([examId, number])
+}
+
+// One per (user, problem): "am rezolvat cu AI" — declared with or without an
+// uploaded solution. dueAt = markedAt + 72h. Past dueAt the problem resets to
+// unsolved and its AI solutions hide, until redeemed: a correct grila answer
+// after dueAt (never after a reveal) or an independent upload stamps
+// redeemedAt, which restores the solutions and settles the final state.
+model AiMark {
+  id         String    @id @default(cuid())
+  problemId  String
+  problem    Problem   @relation(fields: [problemId], references: [id])
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  markedAt   DateTime  @default(now())
+  dueAt      DateTime
+  notifiedAt DateTime? // review digest dedupe
+  redeemedAt DateTime?
+
+  @@unique([problemId, userId])
+  @@index([userId])
 }
 
 enum AttemptKind {
@@ -97,6 +119,8 @@ model Solution {
   sizeBytes   Int       @default(0) // for the per-user quota
   submittedAt DateTime  @default(now())
   aiAssisted  Boolean   @default(false)
+  // LEGACY (pre-2026-07-18): review scheduling moved to AiMark. Kept so the
+  // previous deploy keeps working during rollout; drop in a later migration.
   reviewDueAt DateTime?
   notifiedAt  DateTime?
 

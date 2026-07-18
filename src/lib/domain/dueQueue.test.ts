@@ -1,69 +1,80 @@
 import { describe, expect, it } from "vitest";
-import { dueSolutions, unnotified } from "./dueQueue";
+import { dueProblems, unnotified, type DueMarkInput } from "./dueQueue";
 
-const NOW = new Date("2026-04-01T12:00:00.000Z");
-const BEFORE = new Date("2026-03-31T12:00:00.000Z");
-const AFTER = new Date("2026-04-02T12:00:00.000Z");
+const NOW = new Date("2026-04-10T09:00:00.000Z");
+const BEFORE = new Date("2026-04-09T09:00:00.000Z");
+const AFTER = new Date("2026-04-11T09:00:00.000Z");
 
-function ai(reviewDueAt: Date | null, notifiedAt: Date | null = null) {
-  return { aiAssisted: true, reviewDueAt, notifiedAt };
+function mark(
+  dueAt: Date,
+  redeemedAt: Date | null = null,
+  notifiedAt: Date | null = null,
+): DueMarkInput {
+  return { dueAt, redeemedAt, notifiedAt };
 }
-const independent = { aiAssisted: false, reviewDueAt: null, notifiedAt: null };
 
-describe("dueSolutions (rule 5)", () => {
-  it("returns an AI solution whose review date has passed", () => {
-    const items = dueSolutions([{ solutions: [ai(BEFORE)] }], NOW);
-    expect(items).toHaveLength(1);
+const ai = { aiAssisted: true };
+const independent = { aiAssisted: false };
+
+describe("dueProblems (rule 5, AI-mark revision)", () => {
+  it("includes a mark past its window", () => {
+    expect(
+      dueProblems([{ solutions: [ai], aiMark: mark(BEFORE) }], NOW),
+    ).toHaveLength(1);
   });
 
-  it("includes a review due exactly now (<=, not <)", () => {
-    expect(dueSolutions([{ solutions: [ai(NOW)] }], NOW)).toHaveLength(1);
+  it("includes a mark exactly at its deadline", () => {
+    expect(
+      dueProblems([{ solutions: [], aiMark: mark(NOW) }], NOW),
+    ).toHaveLength(1);
   });
 
-  it("excludes reviews due in the future", () => {
-    expect(dueSolutions([{ solutions: [ai(AFTER)] }], NOW)).toHaveLength(0);
+  it("excludes a mark still inside the window", () => {
+    expect(
+      dueProblems([{ solutions: [ai], aiMark: mark(AFTER) }], NOW),
+    ).toHaveLength(0);
   });
 
-  it("excludes solutions without a review date", () => {
-    expect(dueSolutions([{ solutions: [ai(null)] }], NOW)).toHaveLength(0);
-  });
-
-  it("never includes independent solutions", () => {
-    expect(dueSolutions([{ solutions: [independent] }], NOW)).toHaveLength(0);
-  });
-
-  it("an independent solution clears the whole problem from the queue permanently", () => {
-    const items = dueSolutions(
-      [{ solutions: [ai(BEFORE), independent] }],
-      NOW,
+  it("excludes problems without a mark", () => {
+    expect(dueProblems([{ solutions: [ai], aiMark: null }], NOW)).toHaveLength(
+      0,
     );
-    expect(items).toHaveLength(0);
   });
 
-  it("lists every due AI solution of a still-unsolved problem", () => {
-    const items = dueSolutions(
-      [{ solutions: [ai(BEFORE), ai(NOW), ai(AFTER)] }],
-      NOW,
-    );
-    expect(items).toHaveLength(2);
+  it("excludes redeemed marks — a correct re-solve settles it permanently", () => {
+    expect(
+      dueProblems([{ solutions: [ai], aiMark: mark(BEFORE, BEFORE) }], NOW),
+    ).toHaveLength(0);
   });
 
-  it("handles multiple problems independently", () => {
-    const solved = { solutions: [ai(BEFORE), independent] };
-    const unsolved = { solutions: [ai(BEFORE)] };
-    const notYetDue = { solutions: [ai(AFTER)] };
-    expect(dueSolutions([solved, unsolved, notYetDue], NOW)).toHaveLength(1);
+  it("excludes problems that meanwhile got an independent solution", () => {
+    expect(
+      dueProblems(
+        [{ solutions: [ai, independent], aiMark: mark(BEFORE) }],
+        NOW,
+      ),
+    ).toHaveLength(0);
+  });
+
+  it("keeps only the actually due problems out of a mixed set", () => {
+    const due = { solutions: [ai], aiMark: mark(BEFORE) };
+    const open = { solutions: [ai], aiMark: mark(AFTER) };
+    const settled = { solutions: [ai], aiMark: mark(BEFORE, NOW) };
+    expect(dueProblems([due, open, settled], NOW)).toEqual([due]);
   });
 });
 
-describe("unnotified (digest dedupe input)", () => {
-  it("keeps only items that were never emailed", () => {
-    const problem = { solutions: [] };
-    const items = [
-      { problem, solution: ai(BEFORE, null) },
-      { problem, solution: ai(BEFORE, BEFORE) },
-    ];
-    expect(unnotified(items)).toHaveLength(1);
-    expect(unnotified(items)[0]!.solution.notifiedAt).toBeNull();
+describe("unnotified", () => {
+  it("keeps problems whose mark was never emailed", () => {
+    expect(
+      unnotified([
+        { aiMark: mark(BEFORE) },
+        { aiMark: mark(BEFORE, null, NOW) },
+      ]),
+    ).toHaveLength(1);
+  });
+
+  it("drops problems without a mark", () => {
+    expect(unnotified([{ aiMark: null }])).toHaveLength(0);
   });
 });

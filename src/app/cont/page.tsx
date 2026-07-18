@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { grilaCountsAsDone, solveState } from "@/lib/domain";
+import { aiPhase, grilaCountsAsDone, solveState } from "@/lib/domain";
 import {
   examLabel,
   formatDate,
+  formatDateTime,
   problemNumberCompare,
   solutionIsImage,
 } from "@/lib/format";
+import { problemHref } from "@/lib/slug";
 import { deleteAccountAction } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -27,14 +29,16 @@ export default async function ContPage() {
   });
   const totalBytes = solutions.reduce((sum, s) => sum + s.sizeBytes, 0);
 
-  // Problems that need an independent solution to actually count: solved
-  // only with AI, or grila-checked but guessed in 3+ tries. No latex needed
-  // here — just enough to identify and label each row.
+  // Problems that need an independent re-solve to actually count: AI marks
+  // past their 72h window (the reset), AI marks still in the window, and
+  // grila checks guessed in 3+ tries. No latex needed here — just enough to
+  // identify and label each row.
   const redoCandidates = await prisma.problem.findMany({
     where: {
       OR: [
         { solutions: { some: { userId: user.id } } },
         { attempts: { some: { userId: user.id } } },
+        { aiMarks: { some: { userId: user.id } } },
       ],
     },
     omit: { correctAnswer: true, latex: true },
@@ -47,21 +51,39 @@ export default async function ContPage() {
         select: { kind: true, correct: true },
         orderBy: { createdAt: "asc" },
       },
+      aiMarks: {
+        where: { userId: user.id },
+        select: { dueAt: true, redeemedAt: true },
+      },
     },
   });
 
+  const now = new Date();
   const toRedo = redoCandidates
-    .map((p) => ({
-      problem: p,
-      state: solveState(p.solutions, p.attempts),
-      guessed: !grilaCountsAsDone(p.attempts),
-    }))
+    .map(({ aiMarks, ...p }) => {
+      const aiMark = aiMarks[0] ?? null;
+      return {
+        problem: p,
+        aiMark,
+        state: solveState(p.solutions, p.attempts, aiMark, now),
+        phase: aiPhase(aiMark, now),
+        guessed: !grilaCountsAsDone(p.attempts),
+      };
+    })
     .filter(
-      ({ state, guessed }) =>
-        state === "doar_ai" || (state === "grila" && guessed),
+      ({ state, phase, guessed }) =>
+        phase === "due" ||
+        state === "doar_ai" ||
+        // Redemption settles the problem regardless of the try count.
+        (state === "grila" && guessed && phase !== "redeemed"),
     )
     .sort(
       (a, b) =>
+        // Past-due resets first (oldest deadline on top), then the rest.
+        Number(b.phase === "due") - Number(a.phase === "due") ||
+        (a.phase === "due" && b.phase === "due" && a.aiMark && b.aiMark
+          ? a.aiMark.dueAt.getTime() - b.aiMark.dueAt.getTime()
+          : 0) ||
         b.problem.exam.year - a.problem.exam.year ||
         problemNumberCompare(a.problem.number, b.problem.number),
     );
@@ -124,7 +146,7 @@ export default async function ContPage() {
                     </span>
                   )}
                 </a>
-                <Link href={`/problems/${s.problemId}`} className="min-w-0 flex-1">
+                <Link href={problemHref(s.problem)} className="min-w-0 flex-1">
                   <div className="text-sm font-medium text-ink">
                     Problema {s.problem.number}
                   </div>
@@ -152,28 +174,28 @@ export default async function ContPage() {
         )}
       </section>
 
-      <section className="card space-y-3 p-5">
+      <section id="de-refacut" className="card space-y-3 p-5">
         <div>
           <h2 className="text-sm font-semibold text-ink">
             De refăcut singur ({toRedo.length})
           </h2>
           <p className="mt-0.5 text-xs text-muted">
             Rezolvate cu ajutorul AI sau ghicite pe grilă din 3+ încercări — nu
-            contează la totalul de departajare până nu încarci o rezolvare
-            scrisă de tine.
+            contează până nu le rezolvi din nou tu: corect la grilă (după ce
+            trec cele 72h) sau cu propria rezolvare încărcată.
           </p>
         </div>
         {toRedo.length === 0 ? (
           <p className="text-sm text-muted">
             Nimic de refăcut — tot ce ai rezolvat cu AI sau ghicit pe grilă a
-            fost deja acoperit de o rezolvare independentă.
+            fost deja acoperit de o rezolvare proprie.
           </p>
         ) : (
           <ul className="space-y-2">
-            {toRedo.map(({ problem, state }) => (
+            {toRedo.map(({ problem, state, phase, aiMark }) => (
               <li key={problem.id}>
                 <Link
-                  href={`/problems/${problem.id}`}
+                  href={problemHref(problem)}
                   className="flex items-center justify-between gap-3 rounded-xl border border-line p-2.5 transition-colors hover:bg-surface"
                 >
                   <div className="min-w-0">
@@ -184,9 +206,20 @@ export default async function ContPage() {
                       {examLabel(problem.exam)}
                     </div>
                   </div>
-                  {state === "doar_ai" ? (
-                    <span className="shrink-0 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-bold uppercase text-orange-700">
-                      doar cu AI
+                  {phase === "due" ? (
+                    <span className="shrink-0 rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold uppercase text-rose-700">
+                      de refăcut acum
+                    </span>
+                  ) : state === "doar_ai" ? (
+                    <span
+                      className="shrink-0 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-bold uppercase text-orange-700"
+                      title={
+                        aiMark
+                          ? `se resetează pe ${formatDateTime(aiMark.dueAt)}`
+                          : undefined
+                      }
+                    >
+                      cu AI
                     </span>
                   ) : (
                     <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-700">

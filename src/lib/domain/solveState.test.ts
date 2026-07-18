@@ -85,3 +85,60 @@ describe("grilaCountsAsDone — the 2-try budget (owner decision 2026-07-15)", (
     expect(grilaCountsAsDone([correct, reveal])).toBe(true);
   });
 });
+
+describe("solveState — AI marks (owner revision 2026-07-18)", () => {
+  const NOW = new Date("2026-04-10T09:00:00.000Z");
+  const PAST = new Date("2026-04-09T09:00:00.000Z");
+  const FUTURE = new Date("2026-04-11T09:00:00.000Z");
+
+  it("is 'doar_ai' inside the 72h window, even without an upload", () => {
+    expect(solveState([], [], { dueAt: FUTURE, redeemedAt: null }, NOW)).toBe(
+      "doar_ai",
+    );
+    expect(
+      solveState([aiAssisted], [], { dueAt: FUTURE, redeemedAt: null }, NOW),
+    ).toBe("doar_ai");
+  });
+
+  it("resets to 'nerezolvata' once the window passes unredeemed", () => {
+    expect(solveState([], [], { dueAt: PAST, redeemedAt: null }, NOW)).toBe(
+      "nerezolvata",
+    );
+    expect(
+      solveState([aiAssisted], [], { dueAt: PAST, redeemedAt: null }, NOW),
+    ).toBe("nerezolvata");
+  });
+
+  it("a redeemed mark with an uploaded solution becomes 'singur' — the submission reappears", () => {
+    expect(
+      solveState([aiAssisted], [], { dueAt: PAST, redeemedAt: NOW }, NOW),
+    ).toBe("singur");
+  });
+
+  it("a redeemed mark without an upload becomes 'grila' — rezolvat pe grilă", () => {
+    expect(solveState([], [], { dueAt: PAST, redeemedAt: NOW }, NOW)).toBe(
+      "grila",
+    );
+  });
+
+  it("redemption stands even if the key is revealed afterwards", () => {
+    expect(
+      solveState([], [reveal], { dueAt: PAST, redeemedAt: PAST }, NOW),
+    ).toBe("grila");
+  });
+
+  it("an independent solution always wins over the mark", () => {
+    expect(
+      solveState([independent], [], { dueAt: PAST, redeemedAt: null }, NOW),
+    ).toBe("singur");
+  });
+
+  it("the mark dominates a pre-existing grila verify", () => {
+    expect(
+      solveState([], [correct], { dueAt: FUTURE, redeemedAt: null }, NOW),
+    ).toBe("doar_ai");
+    expect(
+      solveState([], [correct], { dueAt: PAST, redeemedAt: null }, NOW),
+    ).toBe("nerezolvata");
+  });
+});

@@ -1,10 +1,10 @@
-import { dueSolutions, unnotified } from "@/lib/domain";
+import { dueProblems, unnotified } from "@/lib/domain";
 import { buildDigest, type Digest } from "./digest";
 
-export interface NotifiableSolution {
+export interface NotifiableMark {
   id: string;
-  aiAssisted: boolean;
-  reviewDueAt: Date | null;
+  dueAt: Date;
+  redeemedAt: Date | null;
   notifiedAt: Date | null;
 }
 
@@ -17,17 +17,18 @@ export interface NotifiableProblem {
     subject: string;
     session: string | null;
   };
-  solutions: NotifiableSolution[];
+  solutions: { aiAssisted: boolean }[];
+  aiMark: NotifiableMark | null;
 }
 
 export interface CheckDueReviewsDeps {
   now: () => Date;
-  /** Problems with their solutions and exam info. */
+  /** Problems with the user's AI mark, solutions and exam info. */
   loadProblems: () => Promise<NotifiableProblem[]>;
   /** Send the digest email. Throwing aborts the run without stamping. */
   send: (digest: Digest) => Promise<void>;
-  /** Stamp notifiedAt on the given solutions — the dedupe. */
-  stampNotified: (solutionIds: string[], at: Date) => Promise<void>;
+  /** Stamp notifiedAt on the given AI marks — the dedupe. */
+  stampNotified: (markIds: string[], at: Date) => Promise<void>;
   /** Origin used for problem links in the digest. */
   baseUrl?: string;
 }
@@ -35,11 +36,11 @@ export interface CheckDueReviewsDeps {
 export interface CheckDueReviewsResult {
   sent: boolean;
   problemCount: number;
-  solutionIds: string[];
+  markIds: string[];
 }
 
 /**
- * The engine behind the 4-day review emails. Stamping happens only after a
+ * The engine behind the 72h review emails. Stamping happens only after a
  * successful send, so a failed send retries on the next cycle; a successful
  * send never repeats (notifiedAt dedupe). Deliberate tradeoff: if the send
  * succeeds but stamping fails, the digest repeats next cycle (at-least-once)
@@ -50,20 +51,17 @@ export async function checkDueReviews(
 ): Promise<CheckDueReviewsResult> {
   const now = deps.now();
   const problems = await deps.loadProblems();
-  const toNotify = unnotified(dueSolutions(problems, now));
+  const toNotify = unnotified(dueProblems(problems, now));
 
   if (toNotify.length === 0) {
-    return { sent: false, problemCount: 0, solutionIds: [] };
+    return { sent: false, problemCount: 0, markIds: [] };
   }
 
-  const digest = buildDigest(
-    toNotify.map((item) => item.problem),
-    deps.baseUrl,
-  );
+  const digest = buildDigest(toNotify, deps.baseUrl);
   await deps.send(digest);
 
-  const solutionIds = toNotify.map((item) => item.solution.id);
-  await deps.stampNotified(solutionIds, now);
+  const markIds = toNotify.map((p) => (p.aiMark as NotifiableMark).id);
+  await deps.stampNotified(markIds, now);
 
-  return { sent: true, problemCount: digest.problemCount, solutionIds };
+  return { sent: true, problemCount: digest.problemCount, markIds };
 }

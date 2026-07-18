@@ -1,4 +1,5 @@
 import { problemNumberCompare } from "@/lib/format";
+import type { AiMarkLike } from "./aiMark";
 import { solveState, type AttemptLike, type SolveState } from "./solveState";
 
 /** A problem reduced to just the fields filtering depends on. */
@@ -10,6 +11,8 @@ export interface FilterableProblem {
   solutions: readonly { aiAssisted: boolean }[];
   /** Chronological answer attempts; absent = none. */
   attempts?: readonly AttemptLike[];
+  /** The user's AI mark, if any. */
+  aiMark?: AiMarkLike | null;
 }
 
 export interface ProblemFilters {
@@ -53,6 +56,7 @@ export function tagCounts(
 export function matchesFilters(
   problem: FilterableProblem,
   filters: ProblemFilters,
+  now: Date = new Date(),
 ): boolean {
   if (filters.departajareOnly && !problem.isDepartajare) return false;
   if (filters.neclasificat && problem.tags.length !== 0) return false;
@@ -66,7 +70,12 @@ export function matchesFilters(
   }
   if (
     filters.stare &&
-    solveState(problem.solutions, problem.attempts ?? []) !== filters.stare
+    solveState(
+      problem.solutions,
+      problem.attempts ?? [],
+      problem.aiMark ?? null,
+      now,
+    ) !== filters.stare
   ) {
     return false;
   }
@@ -82,6 +91,7 @@ export interface ListProblem {
   tags: readonly { name: string }[];
   solutions: readonly { aiAssisted: boolean }[];
   attempts?: readonly AttemptLike[];
+  aiMark?: AiMarkLike | null;
 }
 
 /**
@@ -92,6 +102,7 @@ export interface ListProblem {
 export function selectVisible<T extends ListProblem>(
   problems: readonly T[],
   filters: ProblemFilters,
+  now: Date = new Date(),
 ): T[] {
   return problems
     .filter((p) =>
@@ -103,8 +114,10 @@ export function selectVisible<T extends ListProblem>(
           tags: p.tags,
           solutions: p.solutions,
           attempts: p.attempts,
+          aiMark: p.aiMark,
         },
         filters,
+        now,
       ),
     )
     .sort(

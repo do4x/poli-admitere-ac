@@ -5,6 +5,7 @@ import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { examProgress, solveState, type SolveState } from "@/lib/domain";
 import { examLabel, problemNumberCompare } from "@/lib/format";
+import { problemHref } from "@/lib/slug";
 import { toggleDepartajare } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -59,16 +60,24 @@ export default async function ExamPage({
             select: { kind: true, correct: true },
             orderBy: { createdAt: "asc" },
           },
+          aiMarks: {
+            where: { userId: user?.id ?? "" },
+            select: { dueAt: true, redeemedAt: true },
+          },
         },
       },
     },
   });
   if (!exam) notFound();
 
-  const problems = [...exam.problems].sort((a, b) =>
-    problemNumberCompare(a.number, b.number),
-  );
-  const progress = examProgress(problems);
+  const now = new Date();
+  const problems = [...exam.problems]
+    .map(({ aiMarks, ...problem }) => ({
+      ...problem,
+      aiMark: aiMarks[0] ?? null,
+    }))
+    .sort((a, b) => problemNumberCompare(a.number, b.number));
+  const progress = examProgress(problems, now);
   const spine = SUBJECT_SPINE[exam.subject] ?? "bg-stone-400";
 
   return (
@@ -93,7 +102,10 @@ export default async function ExamPage({
 
       <ul className="space-y-3">
         {problems.map((problem) => {
-          const status = STATUS[solveState(problem.solutions, problem.attempts)];
+          const status =
+            STATUS[
+              solveState(problem.solutions, problem.attempts, problem.aiMark, now)
+            ];
           return (
             <li
               key={problem.id}
@@ -108,7 +120,10 @@ export default async function ExamPage({
                 />
               )}
               <Link
-                href={`/problems/${problem.id}?from=exam`}
+                href={problemHref(
+                  { number: problem.number, exam },
+                  "from=exam",
+                )}
                 className="flex min-w-0 flex-1 items-center gap-3"
               >
                 <span className="font-display w-12 shrink-0 font-bold">

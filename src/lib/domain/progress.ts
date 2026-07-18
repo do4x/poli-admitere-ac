@@ -1,3 +1,4 @@
+import type { AiMarkLike } from "./aiMark";
 import {
   grilaCountsAsDone,
   solveState,
@@ -9,6 +10,8 @@ export interface ProblemProgressInput {
   solutions: readonly { aiAssisted: boolean }[];
   /** Chronological grila attempts; needed so a grila check counts as progress. */
   attempts?: readonly AttemptLike[];
+  /** The user's AI mark, if any. */
+  aiMark?: AiMarkLike | null;
 }
 
 /**
@@ -17,23 +20,29 @@ export interface ProblemProgressInput {
  * within the first 2 tries ("grila", 1st/2nd choice).
  *
  * Owner decision (2026-07-15): a quick grila check counts toward progress even
- * when no written solution was submitted — sometimes you just confirm the
- * answer and move on. But needing 3+ tries means you were guessing: the
- * problem keeps its "grila" status yet stays in the remaining counter.
- * AI-only ("doar_ai") still does NOT count (rule 4 review still holds).
+ * when no written solution was submitted. Needing 3+ tries means you were
+ * guessing: "grila" status but still remaining. Owner revision (2026-07-18):
+ * redeeming an AI mark — a correct grila answer after the 72h window — counts
+ * regardless of the number of tries; solving with AI alone still never counts.
  */
-export function isDone(problem: ProblemProgressInput): boolean {
+export function isDone(
+  problem: ProblemProgressInput,
+  now: Date = new Date(),
+): boolean {
   const attempts = problem.attempts ?? [];
-  const state = solveState(problem.solutions, attempts);
+  const aiMark = problem.aiMark ?? null;
+  const state = solveState(problem.solutions, attempts, aiMark, now);
   if (state === "singur") return true;
-  return state === "grila" && grilaCountsAsDone(attempts);
+  if (state !== "grila") return false;
+  return grilaCountsAsDone(attempts) || aiMark?.redeemedAt != null;
 }
 
 /** Rule 3: THE counter — departajare problems not yet done (singur or grila). */
 export function remainingCount(
   problems: readonly ProblemProgressInput[],
+  now: Date = new Date(),
 ): number {
-  return problems.filter((p) => p.isDepartajare && !isDone(p)).length;
+  return problems.filter((p) => p.isDepartajare && !isDone(p, now)).length;
 }
 
 export interface ExamProgress {
@@ -44,10 +53,11 @@ export interface ExamProgress {
 /** Departajare progress within one exam (non-departajare problems don't count). */
 export function examProgress(
   problems: readonly ProblemProgressInput[],
+  now: Date = new Date(),
 ): ExamProgress {
   const departajare = problems.filter((p) => p.isDepartajare);
   return {
-    done: departajare.filter(isDone).length,
+    done: departajare.filter((p) => isDone(p, now)).length,
     total: departajare.length,
   };
 }

@@ -1,3 +1,5 @@
+import { problemHref } from "@/lib/slug";
+
 export interface DigestProblem {
   id: string;
   number: string;
@@ -41,14 +43,15 @@ export function buildDigest(
   }
 
   const lines = unique.map(
-    (p) => `- ${problemLabel(p)}\n  ${baseUrl}/problems/${p.id}`,
+    (p) => `- ${problemLabel(p)}\n  ${baseUrl}${problemHref(p)}`,
   );
   const text = [
-    `Au trecut 4 zile. Rezolvă singur, fără AI:`,
+    `Au trecut 3 zile de când le-ai rezolvat cu AI — statutul lor s-a resetat:`,
     "",
     ...lines,
     "",
-    `Contorul scade doar cu soluții independente.`,
+    `Rezolvă-le acum corect la grilă (fără să vezi răspunsul) sau încarcă`,
+    `propria rezolvare — abia atunci contează ca rezolvate.`,
   ].join("\n");
 
   return {

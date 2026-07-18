@@ -75,11 +75,12 @@ model Solution {
 
 1. **Independent solution** = a `Solution` with `aiAssisted = false`.
 2. A departajare problem counts as **done** iff it has ≥ 1 independent solution. AI-assisted solutions never count toward done.
-3. **Remaining counter** `n` = count of problems where `isDepartajare = true` AND no independent solution exists.
-4. When a solution is submitted with `aiAssisted = true`, set `reviewDueAt = submittedAt + 4 days`.
-5. **Due queue** = AI-assisted solutions where `reviewDueAt <= now()` AND the problem still has no independent solution. Submitting an independent solution for that problem clears it from the queue permanently.
-6. `submittedAt` is set server-side at upload time. There is no UI to edit it. This is a commitment device, not a convenience.
+3. **Remaining counter** `n` = count of problems where `isDepartajare = true` AND no independent solution exists. (2026-07-15: a grila verify within 2 pre-reveal tries also counts; 2026-07-18: so does a redeemed AI mark.)
+4. **(revised 2026-07-18)** "Solved with AI" is an `AiMark` per (user, problem) — created by an `aiAssisted` upload or the standalone "Am rezolvat cu AI" button, with `dueAt = markedAt + 72h`. Past `dueAt` the problem RESETS to unsolved and its AI solutions hide. **Redemption** = a correct grila answer after `dueAt` (any number of tries, never after a reveal) or an independent upload → stamps `redeemedAt`, restores the hidden solutions, and settles the state ("singur" if an upload backs it, otherwise "grila"). `Solution.reviewDueAt/notifiedAt` are legacy columns, kept only for rollout.
+5. **Due queue** = AI marks where `dueAt <= now()`, `redeemedAt = null` AND the problem still has no independent solution. Redemption clears it permanently. Surfaced on the dashboard, on `/cont#de-refacut`, and as a red badge on the "Cont" nav link.
+6. `submittedAt` is set server-side at upload time. There is no UI to edit it. This is a commitment device, not a convenience. (Users MAY delete their own uploads.)
 7. Multiple solutions per problem are allowed and expected (re-solving over time). Show them as a chronological timeline on the problem page.
+8. **URLs (2026-07-18):** canonical problem URLs are slugs — `/pb{număr}-{materie}/{admitere|preadmitere|simulare}/{an}` (M1/M2 papers add `-m1`/`-m2`); `simulare` = ADMITERE exam whose session starts with "Simulare". Old `/problems/{id}` 308-redirects. Logic in `src/lib/slug.ts`.
 
 ## Notification engine (Resend)
 
@@ -87,7 +88,7 @@ Local app ⇒ no guaranteed uptime. Therefore:
 
 - **On app startup** (server boot): run `checkDueReviews()`.
 - **While running**: re-run every 6 hours (simple `setInterval` in an instrumentation hook is fine; don't over-engineer with node-cron).
-- `checkDueReviews()`: find due-queue items with `notifiedAt = null`, send ONE digest email listing all of them (problem number, exam, year, link to `http://localhost:3000/problems/{id}`), then stamp `notifiedAt`. One digest, not one email per problem.
+- `checkDueReviews()`: find due-queue items with `notifiedAt = null` (on `AiMark` since 2026-07-18), send ONE digest email listing all of them (problem number, exam, year, slug link), then stamp `notifiedAt`. One digest, not one email per problem.
 - Env vars: `RESEND_API_KEY`, `NOTIFY_EMAIL`, `RESEND_FROM`.
 - Email copy: direct, zero fluff. Subject: `"{n} probleme de rezolvat singur — Departaj"`.
 

@@ -4,6 +4,7 @@ import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import "katex/dist/katex.min.css";
 import "./globals.css";
 import { getSessionUser } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 import { signOutAction } from "./auth/actions";
 import { Nav } from "./Nav";
 
@@ -38,6 +39,18 @@ export default async function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   const days = daysUntilExam();
   const user = await getSessionUser();
+  // The in-site nudge for AI marks past their 72h window. A count is a few
+  // bytes of egress; redemption/independent uploads stamp redeemedAt, so this
+  // needs no joins.
+  const redoCount = user
+    ? await prisma.aiMark.count({
+        where: {
+          userId: user.id,
+          redeemedAt: null,
+          dueAt: { lte: new Date() },
+        },
+      })
+    : 0;
   return (
     <html lang="ro" className={`${inter.variable} ${display.variable}`}>
       <body className="min-h-screen">
@@ -51,7 +64,10 @@ export default async function RootLayout({
                 Departaj
               </span>
             </Link>
-            <Nav user={user && { email: user.email, isAdmin: user.isAdmin }} />
+            <Nav
+              user={user && { email: user.email, isAdmin: user.isAdmin }}
+              redoCount={redoCount}
+            />
             <div className="ml-auto hidden items-center gap-2 rounded-full border border-line bg-card px-3 py-1 text-xs text-muted shadow-soft sm:flex">
               <span className="relative flex h-1.5 w-1.5">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-60" />

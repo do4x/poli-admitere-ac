@@ -54,6 +54,20 @@ export function problemHref(problem: SlugProblem, query?: string): string {
   return `/${problemSlug(problem)}${q}`;
 }
 
+/** "mate/preadmitere/2026" — the exam's own page, no leading slash. */
+export function examSlug(exam: SlugExam): string {
+  const variant = examVariant(exam);
+  const subject = `${exam.subject.toLowerCase()}${
+    variant ? `-${variant.toLowerCase()}` : ""
+  }`;
+  return `${subject}/${examKindSlug(exam)}/${exam.year}`;
+}
+
+/** Absolute-path href for an exam page. */
+export function examHref(exam: SlugExam): string {
+  return `/${examSlug(exam)}`;
+}
+
 export interface ParsedSlug {
   number: string;
   subject: "MATE" | "INFO";
@@ -62,7 +76,10 @@ export interface ParsedSlug {
   year: number;
 }
 
+export type ParsedExamSlug = Omit<ParsedSlug, "number">;
+
 const PB_SEGMENT = /^pb([a-z0-9.]+)-(mate|info)(?:-(m[12]))?$/;
+const SUBJECT_SEGMENT = /^(mate|info)(?:-(m[12]))?$/;
 const KIND_SEGMENTS: readonly KindSlug[] = ["admitere", "preadmitere", "simulare"];
 
 /** Parse ["pb1-mate", "preadmitere", "2026"] → typed parts, or null. */
@@ -86,19 +103,47 @@ export function parseProblemSlug(segments: readonly string[]): ParsedSlug | null
   };
 }
 
+/** Parse ["mate", "preadmitere", "2026"] → typed parts, or null. */
+export function parseExamSlug(
+  segments: readonly string[],
+): ParsedExamSlug | null {
+  if (segments.length !== 3) return null;
+  const [subjectRaw, kindRaw, yearRaw] = segments.map((s) =>
+    decodeURIComponent(s).toLowerCase(),
+  );
+
+  const subject = SUBJECT_SEGMENT.exec(subjectRaw);
+  if (!subject) return null;
+  if (!(KIND_SEGMENTS as readonly string[]).includes(kindRaw)) return null;
+  if (!/^\d{4}$/.test(yearRaw)) return null;
+
+  return {
+    subject: subject[1].toUpperCase() as "MATE" | "INFO",
+    kindSlug: kindRaw as KindSlug,
+    variant: subject[2] ? (subject[2].toUpperCase() as "M1" | "M2") : null,
+    year: Number(yearRaw),
+  };
+}
+
+/** Does this exam answer to the parsed slug (same rules as for problems)? */
+export function matchesParsedExamSlug(
+  parsed: ParsedExamSlug,
+  exam: SlugExam,
+): boolean {
+  if (exam.subject !== parsed.subject) return false;
+  if (exam.year !== parsed.year) return false;
+  if (examKindSlug(exam) !== parsed.kindSlug) return false;
+  if (parsed.variant !== null && examVariant(exam) !== parsed.variant) {
+    return false;
+  }
+  return true;
+}
+
 /** Does this catalog problem answer to the parsed slug? */
 export function matchesParsedSlug(
   parsed: ParsedSlug,
   problem: SlugProblem,
 ): boolean {
   if (problem.number.toLowerCase() !== parsed.number) return false;
-  if (problem.exam.subject !== parsed.subject) return false;
-  if (problem.exam.year !== parsed.year) return false;
-  if (examKindSlug(problem.exam) !== parsed.kindSlug) return false;
-  // A variant in the URL must match; a URL without one still resolves when
-  // unique (the caller rejects ambiguous multi-matches).
-  if (parsed.variant !== null && examVariant(problem.exam) !== parsed.variant) {
-    return false;
-  }
-  return true;
+  return matchesParsedExamSlug(parsed, problem.exam);
 }

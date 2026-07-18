@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { examProgress } from "@/lib/domain";
+import { examHref } from "@/lib/slug";
 
 export const dynamic = "force-dynamic";
 
@@ -103,7 +104,7 @@ export default async function ExamsPage() {
                             return (
                               <li key={exam.id}>
                                 <Link
-                                  href={`/exams/${exam.id}`}
+                                  href={examHref(exam)}
                                   className="inline-flex items-baseline gap-2 hover:underline"
                                 >
                                   <span

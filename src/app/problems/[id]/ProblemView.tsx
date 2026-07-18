@@ -10,6 +10,7 @@ import {
   type SolveState,
 } from "@/lib/domain";
 import { examLabel, formatDateTime, solutionIsImage } from "@/lib/format";
+import { examHref } from "@/lib/slug";
 import { AiMarkControl } from "./AiMarkControl";
 import { DeleteSolutionButton } from "./DeleteSolutionButton";
 import { GrilaCheck } from "./GrilaCheck";
@@ -114,7 +115,7 @@ export async function ProblemView({
       <div>
         <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
           <Link
-            href={`/exams/${problem.examId}`}
+            href={examHref(problem.exam)}
             className="text-sm text-muted transition-colors hover:text-ink"
           >
             ← {examLabel(problem.exam)}

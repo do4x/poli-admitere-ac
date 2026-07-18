@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  examHref,
   examKindSlug,
+  examSlug,
   examVariant,
+  matchesParsedExamSlug,
   matchesParsedSlug,
+  parseExamSlug,
   parseProblemSlug,
   problemHref,
   problemSlug,
@@ -137,5 +141,32 @@ describe("matchesParsedSlug", () => {
     const parsed = parseProblemSlug(["pb2-mate", "admitere", "2018"]);
     expect(matchesParsedSlug(parsed!, { number: "2", exam: m1_2018 })).toBe(true);
     expect(matchesParsedSlug(parsed!, { number: "2", exam: m2_2018 })).toBe(true);
+  });
+});
+
+describe("exam slugs", () => {
+  it("builds and round-trips exam URLs", () => {
+    expect(examSlug(preadmitere2026)).toBe("mate/preadmitere/2026");
+    expect(examSlug(simulare2024)).toBe("info/simulare/2024");
+    expect(examSlug(m1_2018)).toBe("mate-m1/admitere/2018");
+    expect(examHref(admitere2024)).toBe("/info/admitere/2024");
+
+    const parsed = parseExamSlug(examSlug(m2_2018).split("/"));
+    expect(parsed).not.toBeNull();
+    expect(matchesParsedExamSlug(parsed!, m2_2018)).toBe(true);
+    expect(matchesParsedExamSlug(parsed!, m1_2018)).toBe(false);
+  });
+
+  it("separates simulare from admitere of the same year", () => {
+    const parsed = parseExamSlug(["info", "simulare", "2024"]);
+    expect(matchesParsedExamSlug(parsed!, simulare2024)).toBe(true);
+    expect(matchesParsedExamSlug(parsed!, admitere2024)).toBe(false);
+  });
+
+  it("rejects junk and problem-shaped slugs", () => {
+    expect(parseExamSlug(["fizica", "admitere", "2024"])).toBeNull();
+    expect(parseExamSlug(["pb1-mate", "admitere", "2024"])).toBeNull();
+    expect(parseExamSlug(["mate", "bac", "2024"])).toBeNull();
+    expect(parseExamSlug(["mate", "admitere"])).toBeNull();
   });
 });

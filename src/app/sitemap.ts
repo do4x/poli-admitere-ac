@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { fetchCatalog } from "@/app/probleme/query";
 import { siteUrl } from "@/lib/auth";
-import { problemHref } from "@/lib/slug";
+import { examHref, problemHref } from "@/lib/slug";
 
 /**
  * Clean canonical URLs for crawlers — robots.ts blocks every query-string
@@ -12,10 +12,12 @@ import { problemHref } from "@/lib/slug";
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = siteUrl();
   const problems = await fetchCatalog();
+  const examUrls = new Set(problems.map((p) => `${base}${examHref(p.exam)}`));
   return [
     { url: base },
     { url: `${base}/probleme` },
     { url: `${base}/exams` },
+    ...[...examUrls].map((url) => ({ url })),
     ...problems.map((problem) => ({
       url: `${base}${problemHref(problem)}`,
     })),

@@ -108,9 +108,7 @@ export async function ExamView({ examId }: { examId: string }) {
           return (
             <li
               key={problem.id}
-              className={`relative flex items-center gap-4 overflow-hidden rounded-2xl border-2 bg-card py-3 pl-6 pr-4 shadow-soft ${
-                problem.isDepartajare ? status.border : "border-line"
-              }`}
+              className={`relative flex items-center gap-4 overflow-hidden rounded-2xl border-2 bg-card py-3 pl-6 pr-4 shadow-soft ${status.border}`}
             >
               {problem.isDepartajare && (
                 <span
@@ -128,20 +126,18 @@ export async function ExamView({ examId }: { examId: string }) {
                 <span className="font-display w-12 shrink-0 font-bold">
                   {problem.number}
                 </span>
-                <div className="min-w-0 flex-1 line-clamp-2 text-sm text-muted [&_.katex-display]:my-0 [&_.katex-display]:inline [&_.katex]:text-[0.95em] [&_p]:my-0 [&_p]:inline">
+                <div className="min-w-0 max-h-12 flex-1 overflow-hidden line-clamp-2 text-sm text-muted [&_.katex-display]:my-0 [&_.katex-display]:inline [&_.katex]:text-[0.95em] [&_p]:my-0 [&_p]:inline [&_pre]:my-0">
                   <Statement latex={problem.latex} />
                 </div>
               </Link>
               <span className="shrink-0 text-xs text-faint tabular-nums">
                 {problem.solutions.length} sol.
               </span>
-              {problem.isDepartajare && (
-                <span
-                  className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${status.badge}`}
-                >
-                  {status.label}
-                </span>
-              )}
+              <span
+                className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${status.badge}`}
+              >
+                {status.label}
+              </span>
               {user?.isAdmin ? (
                 <form action={toggleDepartajare.bind(null, problem.id)}>
                   <button

@@ -84,15 +84,16 @@ export async function signUpAction(
   return { error: null, verifyEmail: email };
 }
 
-/** Verifică codul de 6 cifre primit pe email. */
+/** Verifică codul numeric primit pe email (Supabase trimite 8 cifre;
+ *  acceptăm și 6 pentru template-urile vechi). */
 export async function verifyCodeAction(
   email: string,
   _previous: AuthState,
   formData: FormData,
 ): Promise<AuthState> {
   const token = String(formData.get("code") ?? "").trim();
-  if (!/^\d{6}$/.test(token)) {
-    return { error: "Codul are 6 cifre.", verifyEmail: email };
+  if (!/^\d{6,8}$/.test(token)) {
+    return { error: "Codul are 6–8 cifre.", verifyEmail: email };
   }
 
   const supabase = await createClient();

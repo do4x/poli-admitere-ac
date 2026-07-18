@@ -78,12 +78,12 @@ function VerifyCode({ email }: { email: string }) {
           type="text"
           name="code"
           inputMode="numeric"
-          pattern="\d{6}"
-          maxLength={6}
+          pattern="\d{6,8}"
+          maxLength={8}
           required
           autoFocus
           autoComplete="one-time-code"
-          placeholder="000000"
+          placeholder="00000000"
           className={`${INPUT} text-center font-display text-2xl tracking-[0.5em]`}
         />
         <Feedback state={state} />

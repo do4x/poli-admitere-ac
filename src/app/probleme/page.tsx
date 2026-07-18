@@ -12,6 +12,7 @@ import {
 import { getSessionUser } from "@/lib/auth";
 import { examLabel } from "@/lib/format";
 import { problemHref } from "@/lib/slug";
+import { subjectStyle } from "@/lib/subjects";
 import { FilterBar } from "./FilterBar";
 import { TaxonomyManager } from "./TaxonomyManager";
 import { fetchFilterableProblems } from "./query";
@@ -20,11 +21,6 @@ import { PAGE_SIZE, pageHref, parseFilters, parsePage } from "./searchFilters";
 export const dynamic = "force-dynamic";
 
 // Left spine = subject; card outline + status badge = solve state.
-const SUBJECT_SPINE: Record<string, string> = {
-  MATE: "bg-blue-500",
-  INFO: "bg-violet-500",
-};
-
 const STATUS: Record<
   SolveState,
   { border: string; badge: string; label: string }
@@ -149,7 +145,7 @@ export default async function ProblemePage({
                 )
               ];
             const due = aiPhase(problem.aiMark, now) === "due";
-            const spine = SUBJECT_SPINE[problem.exam.subject] ?? "bg-stone-400";
+            const spine = subjectStyle(problem.exam.subject).spine;
             return (
               <li key={problem.id}>
                 <Link href={problemHref(problem, ctxQuery)} className="block">

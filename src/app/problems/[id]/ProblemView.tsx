@@ -11,6 +11,7 @@ import {
 } from "@/lib/domain";
 import { examLabel, formatDateTime, solutionIsImage } from "@/lib/format";
 import { examHref } from "@/lib/slug";
+import { subjectStyle } from "@/lib/subjects";
 import { AiMarkControl } from "./AiMarkControl";
 import { DeleteSolutionButton } from "./DeleteSolutionButton";
 import { GrilaCheck } from "./GrilaCheck";
@@ -24,11 +25,6 @@ const STATUS: Record<SolveState, { badge: string; label: string }> = {
   grila: { badge: "bg-teal-100 text-teal-700", label: "verificată pe grilă" },
   doar_ai: { badge: "bg-orange-100 text-orange-700", label: "doar cu AI" },
   singur: { badge: "bg-green-100 text-green-700", label: "rezolvată singur" },
-};
-
-const SUBJECT: Record<string, { dot: string; label: string }> = {
-  MATE: { dot: "bg-blue-500", label: "Matematică" },
-  INFO: { dot: "bg-violet-500", label: "Informatică" },
 };
 
 /**
@@ -96,7 +92,7 @@ export async function ProblemView({
       : problem.solutions;
   const hiddenAiCount = problem.solutions.length - visibleSolutions.length;
   const status = STATUS[state];
-  const subject = SUBJECT[problem.exam.subject];
+  const subject = subjectStyle(problem.exam.subject);
 
   // Grila data: the key is fetched separately and stays server-side; it is
   // passed to the client ONLY after the user explicitly revealed it.

@@ -6,14 +6,10 @@ import { prisma } from "@/lib/db";
 import { examProgress, solveState, type SolveState } from "@/lib/domain";
 import { examLabel, problemNumberCompare } from "@/lib/format";
 import { problemHref } from "@/lib/slug";
+import { subjectStyle } from "@/lib/subjects";
 import { toggleDepartajare } from "./actions";
 
 export const dynamic = "force-dynamic";
-
-const SUBJECT_SPINE: Record<string, string> = {
-  MATE: "bg-blue-500",
-  INFO: "bg-violet-500",
-};
 
 const STATUS: Record<SolveState, { border: string; badge: string; label: string }> = {
   nerezolvata: {
@@ -77,7 +73,9 @@ export async function ExamView({ examId }: { examId: string }) {
     }))
     .sort((a, b) => problemNumberCompare(a.number, b.number));
   const progress = examProgress(problems, now);
-  const spine = SUBJECT_SPINE[exam.subject] ?? "bg-stone-400";
+  // Subject color is the same for every problem in one exam, and shows on
+  // every row regardless of departajare status.
+  const spine = subjectStyle(exam.subject).spine;
 
   return (
     <div className="space-y-4">
@@ -110,12 +108,10 @@ export async function ExamView({ examId }: { examId: string }) {
               key={problem.id}
               className={`relative flex items-center gap-4 overflow-hidden rounded-2xl border-2 bg-card py-3 pl-6 pr-4 shadow-soft ${status.border}`}
             >
-              {problem.isDepartajare && (
-                <span
-                  className={`absolute inset-y-0 left-0 w-1.5 ${spine}`}
-                  aria-hidden
-                />
-              )}
+              <span
+                className={`absolute inset-y-0 left-0 w-1.5 ${spine}`}
+                aria-hidden
+              />
               <Link
                 href={problemHref(
                   { number: problem.number, exam },

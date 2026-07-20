@@ -1,8 +1,8 @@
 import { prisma } from "@/lib/db";
-import { selectVisible, type ProblemFilters } from "@/lib/domain";
+import { needsDifficulty, selectVisible, type ProblemFilters } from "@/lib/domain";
 import { problemNumberCompare } from "@/lib/format";
 import { problemHref, type SlugExam } from "@/lib/slug";
-import { fetchFilterableProblems } from "@/app/probleme/query";
+import { fetchFilterableProblems, fetchSolveCounts } from "@/app/probleme/query";
 import { parseFilters } from "@/app/probleme/searchFilters";
 
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -42,9 +42,10 @@ export interface Neighbors {
 export async function resolveNeighbors(
   currentId: string,
   exam: { id: string } & SlugExam,
-  userId: string | undefined,
+  user: { id: string; isAdmin: boolean } | null,
   searchParams: SearchParams,
 ): Promise<Neighbors> {
+  const userId = user?.id;
   if (first(searchParams.from) === "probleme") {
     const parsed = parseFilters(searchParams);
     const filters: ProblemFilters = {
@@ -54,11 +55,23 @@ export async function resolveNeighbors(
       stare: parsed.stare,
       neclasificat: parsed.neclasificat,
       departajareOnly: !parsed.toate,
+      // Same admin gate as /probleme, so the button can never walk a list the
+      // page itself would not show.
+      minLevel: user?.isAdmin ? parsed.minLevel : undefined,
     };
-    const visible = selectVisible(
-      await fetchFilterableProblems(userId),
-      filters,
-    );
+    // Same order as the list the user came from — including the sort, or the
+    // button would walk a different sequence than the one on screen.
+    const sort =
+      parsed.sort && needsDifficulty(parsed.sort) && !user?.isAdmin
+        ? undefined
+        : parsed.sort;
+    const [problems, counts] = await Promise.all([
+      fetchFilterableProblems(userId),
+      sort === "relevanta" ? fetchSolveCounts() : Promise.resolve(null),
+    ]);
+    const visible = selectVisible(problems, filters, new Date(), sort, {
+      solveCounts: counts ? new Map(Object.entries(counts)) : undefined,
+    });
     const idx = visible.findIndex((p) => p.id === currentId);
     const query = carry(searchParams, "probleme");
     const link = (p: (typeof visible)[number]): NeighborLink => ({

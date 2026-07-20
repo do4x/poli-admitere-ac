@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { Statement } from "@/components/Statement";
+import { DifficultyBadge } from "@/components/Stars";
 import { prisma } from "@/lib/db";
 import {
   aiPhase,
+  needsDifficulty,
   selectVisible,
   solveState,
   tagCounts,
@@ -15,7 +17,7 @@ import { problemHref } from "@/lib/slug";
 import { subjectStyle } from "@/lib/subjects";
 import { FilterBar } from "./FilterBar";
 import { TaxonomyManager } from "./TaxonomyManager";
-import { fetchFilterableProblems } from "./query";
+import { fetchFilterableProblems, fetchSolveCounts } from "./query";
 import { PAGE_SIZE, pageHref, parseFilters, parsePage } from "./searchFilters";
 
 export const dynamic = "force-dynamic";
@@ -64,6 +66,10 @@ export default async function ProblemePage({
     }),
   ]);
 
+  // Difficulty is admin-only for now: a non-admin hitting ?dificultate=4 by
+  // hand gets the unfiltered list, not a hidden feature.
+  const canSeeDifficulty = user?.isAdmin === true;
+
   const domainFilters: ProblemFilters = {
     tagName: parsed.tagName,
     subject: parsed.subject,
@@ -71,10 +77,23 @@ export default async function ProblemePage({
     stare: parsed.stare,
     neclasificat: parsed.neclasificat,
     departajareOnly: !parsed.toate,
+    minLevel: canSeeDifficulty ? parsed.minLevel : undefined,
   };
 
+  // A non-admin cannot sort by a grading they cannot see either.
+  const sort =
+    parsed.sort && needsDifficulty(parsed.sort) && !canSeeDifficulty
+      ? undefined
+      : parsed.sort;
+  // Only the popularity sort needs the global aggregate — everyone else skips
+  // the round trip entirely.
+  const solveCounts =
+    sort === "relevanta" ? new Map(Object.entries(await fetchSolveCounts())) : undefined;
+
   const now = new Date();
-  const visible = selectVisible(problems, domainFilters, now);
+  const visible = selectVisible(problems, domainFilters, now, sort, {
+    solveCounts,
+  });
 
   const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
   const page = Math.min(parsePage(params), totalPages);
@@ -126,6 +145,13 @@ export default async function ProblemePage({
         tags={allTags}
         years={years}
         counts={counts}
+        showDifficulty={canSeeDifficulty}
+        gradedCount={
+          canSeeDifficulty
+            ? scopeSet.filter((p) => p.difficulty).length
+            : undefined
+        }
+        sort={sort}
       />
 
       {visible.length === 0 ? (
@@ -158,13 +184,24 @@ export default async function ProblemePage({
                     />
                     <div className="flex items-start gap-4">
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-baseline gap-2.5">
+                        <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
                           <span className="font-display text-base font-bold">
                             {problem.number}
                           </span>
                           <span className="truncate text-xs text-faint">
                             {examLabel(problem.exam)}
                           </span>
+                          {canSeeDifficulty && problem.difficulty && (
+                            <DifficultyBadge
+                              difficulty={problem.difficulty}
+                              showTime
+                            />
+                          )}
+                          {canSeeDifficulty && !problem.difficulty && (
+                            <span className="text-[10px] uppercase tracking-wide text-faint">
+                              negradată
+                            </span>
+                          )}
                         </div>
                         <div className="mt-1.5 max-h-12 overflow-hidden text-sm text-ink/75">
                           <Statement latex={problem.latex} />

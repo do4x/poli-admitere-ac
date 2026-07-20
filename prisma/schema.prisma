@@ -55,9 +55,48 @@ model Problem {
   attempts      AnswerAttempt[]
   aiMarks       AiMark[]
   tags          Tag[]
+  difficulty    Difficulty?
   createdAt     DateTime        @default(now())
 
   @@unique([examId, number])
+}
+
+enum Archetype {
+  BRUTAL
+  INSIGHT
+  GRIND
+  TRAP
+  TRIVIAL
+  STANDARD
+}
+
+// Difficulty grading per DIFICULTATE.md v2.0 — a property of the problem, not
+// of the user, so one row per problem. Graded offline (the grader must solve
+// the problem first) and imported with `npm run import:dificultate`.
+// `dRaw` is the real ordering; `level` is the human-facing 0.5★–5★ label,
+// stored rather than derived so the DB can sort and filter on it.
+model Difficulty {
+  problemId     String    @id
+  problem       Problem   @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  r             Float // recunoaștere, 1..5 step 0.5
+  e             Float // execuție, 1..5 step 0.5
+  t             Float // capcane / distractori, 0..1
+  p             Float // îngustimea drumului, 0..0.5
+  k             Float // raritatea cunoștințelor, 0..0.5
+  v             Float // verificabilitate, -0.5..0.5
+  dRaw          Float
+  level         Float // 0.5..5 step 0.5
+  bandMargin    Boolean   @default(false) // ≤0.15 de o graniță ⇒ se planifică drept banda superioară
+  archetype     Archetype
+  targetMinutes Int
+  // The reusable recognition rule ("semnal ⟹ mișcare"). Deduplicated across
+  // problems, this is the finite inventory of patterns that covers the exam.
+  trigger       String?
+  uncertain     Boolean   @default(false) // necesită re-scorare manuală
+  gradedAt      DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([level])
 }
 
 // One per (user, problem): "am rezolvat cu AI" — declared with or without an

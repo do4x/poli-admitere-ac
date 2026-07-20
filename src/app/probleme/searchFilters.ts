@@ -1,4 +1,10 @@
-import type { SolveState } from "@/lib/domain";
+import {
+  DEFAULT_SORT,
+  LEVELS,
+  SORT_KEYS,
+  type SolveState,
+  type SortKey,
+} from "@/lib/domain";
 
 /**
  * URL param names for /probleme. `tag` carries the tag NAME (URL-encoded).
@@ -12,6 +18,10 @@ export interface PageFilters {
   neclasificat?: boolean;
   /** true ⇒ include non-departajare problems too. */
   toate?: boolean;
+  /** Minimum difficulty level (0.5…5). Admin-only for now. */
+  minLevel?: number;
+  /** List order. Absent = the default (`recente`), applied by `sortProblems`. */
+  sort?: SortKey;
 }
 
 const STARI: readonly SolveState[] = ["nerezolvata", "grila", "singur", "doar_ai"];
@@ -29,6 +39,17 @@ export function parseFilters(
   searchParams: Record<string, string | string[] | undefined>,
 ): PageFilters {
   const filters: PageFilters = {};
+
+  // Only a non-default, valid key is recorded — so `?sortare=recente` and no
+  // param at all produce the same filters object, and the same URL chips.
+  const sort = first(searchParams.sortare);
+  if (
+    sort &&
+    sort !== DEFAULT_SORT &&
+    (SORT_KEYS as readonly string[]).includes(sort)
+  ) {
+    filters.sort = sort as SortKey;
+  }
 
   const tag = first(searchParams.tag);
   if (tag && tag.trim()) filters.tagName = tag;
@@ -51,6 +72,12 @@ export function parseFilters(
 
   if (first(searchParams.neclasificat) === "1") filters.neclasificat = true;
   if (first(searchParams.toate) === "1") filters.toate = true;
+
+  const dificultate = first(searchParams.dificultate);
+  if (dificultate !== undefined) {
+    const level = Number(dificultate);
+    if ((LEVELS as readonly number[]).includes(level)) filters.minLevel = level;
+  }
 
   return filters;
 }

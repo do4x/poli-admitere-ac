@@ -1,6 +1,18 @@
-import { problemNumberCompare } from "@/lib/format";
 import type { AiMarkLike } from "./aiMark";
+import { meetsMinLevel } from "./difficulty";
 import { solveState, type AttemptLike, type SolveState } from "./solveState";
+import {
+  sortProblems,
+  type SortContext,
+  type SortKey,
+} from "./sorting";
+
+/** The stored grading, reduced to what filtering and sorting need. */
+export interface DifficultyLike {
+  level: number;
+  dRaw: number;
+  bandMargin: boolean;
+}
 
 /** A problem reduced to just the fields filtering depends on. */
 export interface FilterableProblem {
@@ -8,6 +20,8 @@ export interface FilterableProblem {
   subject: string; // "MATE" | "INFO"
   year: number;
   tags: readonly { name: string }[];
+  /** The problem's grading, if it has been scored yet. */
+  difficulty?: DifficultyLike | null;
   solutions: readonly { aiAssisted: boolean }[];
   /** Chronological answer attempts; absent = none. */
   attempts?: readonly AttemptLike[];
@@ -23,6 +37,9 @@ export interface ProblemFilters {
   neclasificat?: boolean;
   /** When true, only departajare problems match. Default scope on /probleme. */
   departajareOnly?: boolean;
+  /** "Dificultate minimă": keep problems graded at this level or above.
+   *  Ungraded problems drop out — see `meetsMinLevel`. */
+  minLevel?: number;
 }
 
 export interface TagCounts {
@@ -60,6 +77,7 @@ export function matchesFilters(
 ): boolean {
   if (filters.departajareOnly && !problem.isDepartajare) return false;
   if (filters.neclasificat && problem.tags.length !== 0) return false;
+  if (!meetsMinLevel(problem.difficulty, filters.minLevel)) return false;
   if (filters.subject && problem.subject !== filters.subject) return false;
   if (filters.year !== undefined && problem.year !== filters.year) return false;
   if (
@@ -89,39 +107,40 @@ export interface ListProblem {
   isDepartajare: boolean;
   exam: { subject: string; year: number };
   tags: readonly { name: string }[];
+  difficulty?: DifficultyLike | null;
   solutions: readonly { aiAssisted: boolean }[];
   attempts?: readonly AttemptLike[];
   aiMark?: AiMarkLike | null;
 }
 
 /**
- * Filter + order a problem list exactly as /probleme renders it (year desc,
- * then problem number). Shared by the /probleme page and the "next problem"
- * resolver so the button can never disagree with the list you came from.
+ * Filter + order a problem list exactly as /probleme renders it. Shared by the
+ * /probleme page and the "next problem" resolver so the button can never
+ * disagree with the list you came from — which is why the sort lives here and
+ * not in the page: both callers pass the same `sort`/`context`.
  */
 export function selectVisible<T extends ListProblem>(
   problems: readonly T[],
   filters: ProblemFilters,
   now: Date = new Date(),
+  sort?: SortKey,
+  context?: SortContext,
 ): T[] {
-  return problems
-    .filter((p) =>
-      matchesFilters(
-        {
-          isDepartajare: p.isDepartajare,
-          subject: p.exam.subject,
-          year: p.exam.year,
-          tags: p.tags,
-          solutions: p.solutions,
-          attempts: p.attempts,
-          aiMark: p.aiMark,
-        },
-        filters,
-        now,
-      ),
-    )
-    .sort(
-      (a, b) =>
-        b.exam.year - a.exam.year || problemNumberCompare(a.number, b.number),
-    );
+  const visible = problems.filter((p) =>
+    matchesFilters(
+      {
+        isDepartajare: p.isDepartajare,
+        subject: p.exam.subject,
+        year: p.exam.year,
+        tags: p.tags,
+        difficulty: p.difficulty,
+        solutions: p.solutions,
+        attempts: p.attempts,
+        aiMark: p.aiMark,
+      },
+      filters,
+      now,
+    ),
+  );
+  return sortProblems(visible, sort, context);
 }

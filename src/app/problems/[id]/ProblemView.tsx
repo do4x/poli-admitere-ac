@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Statement } from "@/components/Statement";
+import { DifficultyBadge } from "@/components/Stars";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import {
@@ -65,7 +66,7 @@ export async function ProblemView({
   const { prev, next } = await resolveNeighbors(
     problem.id,
     problem.exam,
-    user?.id,
+    user,
     sp,
   );
 
@@ -85,6 +86,12 @@ export async function ProblemView({
         select: { dueAt: true, redeemedAt: true },
       })
     : null;
+  // Difficulty grading is admin-only for now, so non-admins never pay for the
+  // extra round trip.
+  const difficulty = user?.isAdmin
+    ? await prisma.difficulty.findUnique({ where: { problemId: problem.id } })
+    : null;
+
   const now = new Date();
   const state = solveState(problem.solutions, problem.attempts, aiMark, now);
   const phase = aiPhase(aiMark, now);
@@ -193,7 +200,20 @@ export async function ProblemView({
               {tag.name}
             </span>
           ))}
+          {difficulty && (
+            <DifficultyBadge difficulty={difficulty} size="md" showTime />
+          )}
         </div>
+
+        {difficulty?.trigger && (
+          <p className="mt-2 max-w-3xl text-xs text-muted">
+            <span className="font-semibold text-faint">Declanșator: </span>
+            {difficulty.trigger}
+            {difficulty.uncertain && (
+              <span className="ml-2 text-amber-600">(gradare incertă)</span>
+            )}
+          </p>
+        )}
       </div>
 
       <section className="card p-6">

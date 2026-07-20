@@ -1,5 +1,13 @@
 import Link from "next/link";
-import type { SolveState, TagCounts } from "@/lib/domain";
+import {
+  DEFAULT_SORT,
+  DEPARTAJARE_LEVEL,
+  levelLabel,
+  starSlots,
+  type SolveState,
+  type SortKey,
+  type TagCounts,
+} from "@/lib/domain";
 import type { PageFilters } from "./searchFilters";
 import { toggleParam } from "./searchFilters";
 
@@ -16,7 +24,23 @@ interface FilterBarProps {
   tags: TagInfo[];
   years: number[];
   counts: TagCounts;
+  /** Difficulty grading is admin-only for now. */
+  showDifficulty?: boolean;
+  /** How many problems in the current scope carry a grading at all. */
+  gradedCount?: number;
+  /** Active order; undefined = the default (`recente`). */
+  sort?: SortKey;
 }
+
+/** Sort options, in the order they are offered. The two difficulty ones are
+ *  hidden from non-admins, like the grading itself. */
+const SORTARI: { key: SortKey; label: string; difficulty?: boolean }[] = [
+  { key: "relevanta", label: "cele mai rezolvate" },
+  { key: "greu", label: "dificultate ↓", difficulty: true },
+  { key: "usor", label: "dificultate ↑", difficulty: true },
+  { key: "recente", label: "recente → vechi" },
+  { key: "vechi", label: "vechi → recente" },
+];
 
 const STARE: { key: SolveState; label: string; active: string }[] = [
   { key: "nerezolvata", label: "nerezolvată", active: "bg-rose-600 text-white border-rose-600" },
@@ -61,7 +85,9 @@ function Group({
 }) {
   return (
     <div className="flex flex-wrap items-baseline gap-2">
-      <span className="w-16 shrink-0 text-[11px] font-semibold uppercase tracking-wide text-faint">
+      {/* Wide enough for the longest label ("Dificultate") so every row's chips
+          start on the same x — a fixed w-16 let that label run into them. */}
+      <span className="w-24 shrink-0 pr-2 text-[11px] font-semibold uppercase tracking-wide text-faint">
         {label}
       </span>
       <div className="flex flex-wrap gap-1.5">{children}</div>
@@ -69,9 +95,105 @@ function Group({
   );
 }
 
-export function FilterBar({ current, params, tags, years, counts }: FilterBarProps) {
+/**
+ * "Dificultate minimă": five stars, each split into two halves, so a click
+ * picks any level on the half-star scale of DIFICULTATE.md. Clicking the
+ * level that is already active clears the filter (same toggle semantics as
+ * every other chip), and so does "orice".
+ */
+function MinLevelPicker({
+  params,
+  min,
+  gradedCount,
+}: {
+  params: RawParams;
+  min: number | undefined;
+  gradedCount: number | undefined;
+}) {
+  const link = (value: number) =>
+    `/probleme${toggleParam(params, "dificultate", String(value))}`;
+  const slots = starSlots(min ?? 0);
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="inline-flex items-center text-lg leading-none text-amber-500">
+        {slots.map((slot, i) => {
+          const star = i + 1;
+          return (
+            <span key={star} className="relative inline-block">
+              {/* A half star is drawn as a DIMMED star with its left half
+                  overpainted at full opacity. The reverse (full star + a
+                  translucent overlay on the right) cannot work: a transparent
+                  layer never erases what is under it, so 2½ read as 3. */}
+              <span aria-hidden className={slot === "full" ? "" : "opacity-20"}>
+                ★
+              </span>
+              {slot === "half" && (
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-y-0 left-0 w-1/2 overflow-hidden"
+                >
+                  ★
+                </span>
+              )}
+              {/* Two invisible hit targets per star: left half = X½, right half = X. */}
+              <Link
+                href={link(star - 0.5)}
+                aria-label={`Dificultate minimă ${levelLabel(star - 0.5)}`}
+                title={`≥ ${levelLabel(star - 0.5)}`}
+                className="absolute inset-y-0 left-0 w-1/2 rounded-l transition-colors hover:bg-amber-500/15"
+              />
+              <Link
+                href={link(star)}
+                aria-label={`Dificultate minimă ${levelLabel(star)}`}
+                title={`≥ ${levelLabel(star)}`}
+                className="absolute inset-y-0 right-0 w-1/2 rounded-r transition-colors hover:bg-amber-500/15"
+              />
+            </span>
+          );
+        })}
+      </span>
+
+      <span className="text-xs font-medium text-muted tabular-nums">
+        {min === undefined ? "orice dificultate" : `≥ ${levelLabel(min)}`}
+      </span>
+
+      {min !== undefined && (
+        <Chip href={link(min)} active={false}>
+          orice
+        </Chip>
+      )}
+
+      <Chip
+        href={link(DEPARTAJARE_LEVEL)}
+        active={min === DEPARTAJARE_LEVEL}
+        activeClass="bg-amber-500 text-white border-amber-500"
+      >
+        prag departajare ({levelLabel(DEPARTAJARE_LEVEL)})
+      </Chip>
+
+      {gradedCount !== undefined && (
+        <span className="text-[11px] text-faint tabular-nums">
+          {gradedCount} gradate
+        </span>
+      )}
+    </div>
+  );
+}
+
+export function FilterBar({
+  current,
+  params,
+  tags,
+  years,
+  counts,
+  showDifficulty = false,
+  gradedCount,
+  sort,
+}: FilterBarProps) {
   const link = (key: string, value: string) =>
     `/probleme${toggleParam(params, key, value)}`;
+  const activeSort = sort ?? DEFAULT_SORT;
 
   const visibleTags = current.subject
     ? tags.filter((t) => t.subject === current.subject)
@@ -79,6 +201,22 @@ export function FilterBar({ current, params, tags, years, counts }: FilterBarPro
 
   return (
     <div className="card space-y-2.5 p-4">
+      {/* Ordering, not filtering — kept above the filters and ruled off, so
+          "why is this problem first?" is answered before you scan the list. */}
+      <div className="border-b border-line pb-2.5">
+        <Group label="Sortare">
+          {SORTARI.filter((s) => showDifficulty || !s.difficulty).map((s) => (
+            <Chip
+              key={s.key}
+              href={link("sortare", s.key)}
+              active={activeSort === s.key}
+            >
+              {s.label}
+            </Chip>
+          ))}
+        </Group>
+      </div>
+
       <Group label="Scop">
         <Chip href={link("toate", "1")} active={!current.toate}>
           Doar departajare
@@ -87,6 +225,16 @@ export function FilterBar({ current, params, tags, years, counts }: FilterBarPro
           Toate problemele
         </Chip>
       </Group>
+
+      {showDifficulty && (
+        <Group label="Dificultate">
+          <MinLevelPicker
+            params={params}
+            min={current.minLevel}
+            gradedCount={gradedCount}
+          />
+        </Group>
+      )}
 
       <Group label="Materie">
         <Chip

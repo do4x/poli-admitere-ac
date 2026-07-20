@@ -26,6 +26,30 @@ describe("parseFilters", () => {
     });
   });
 
+  it("parses a sort key", () => {
+    expect(parseFilters({ sortare: "greu" })).toEqual({ sort: "greu" });
+    expect(parseFilters({ sortare: "relevanta" })).toEqual({ sort: "relevanta" });
+  });
+
+  it("treats the default sort and an unknown sort as no sort at all", () => {
+    // `recente` IS the default, so recording it would only make the URL noisy.
+    expect(parseFilters({ sortare: "recente" })).toEqual({});
+    expect(parseFilters({ sortare: "aleatoriu" })).toEqual({});
+  });
+
+  it("parses a half-star minimum difficulty", () => {
+    expect(parseFilters({ dificultate: "3.5" })).toEqual({ minLevel: 3.5 });
+    expect(parseFilters({ dificultate: "5" })).toEqual({ minLevel: 5 });
+    expect(parseFilters({ dificultate: "0.5" })).toEqual({ minLevel: 0.5 });
+  });
+
+  it("drops a difficulty that is not on the half-star scale", () => {
+    expect(parseFilters({ dificultate: "3.25" })).toEqual({});
+    expect(parseFilters({ dificultate: "6" })).toEqual({});
+    expect(parseFilters({ dificultate: "0" })).toEqual({});
+    expect(parseFilters({ dificultate: "grea" })).toEqual({});
+  });
+
   it("drops invalid values silently", () => {
     expect(
       parseFilters({

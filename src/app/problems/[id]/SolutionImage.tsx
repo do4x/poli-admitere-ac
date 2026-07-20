@@ -5,6 +5,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 interface SolutionImageProps {
   src: string;
   alt: string;
+  /** Inline preview height cap. Wider surfaces (/revizuire) pass a taller one. */
+  heightClass?: string;
 }
 
 /**
@@ -13,7 +15,11 @@ interface SolutionImageProps {
  * supports zoom (click a spot / wheel / pinch on trackpads via wheel) and
  * drag-to-pan. No dependencies; Escape or backdrop closes.
  */
-export function SolutionImage({ src, alt }: SolutionImageProps) {
+export function SolutionImage({
+  src,
+  alt,
+  heightClass = "max-h-[36rem]",
+}: SolutionImageProps) {
   const [open, setOpen] = useState(false);
   const [scale, setScale] = useState(1);
   const [tx, setTx] = useState(0);
@@ -71,7 +77,7 @@ export function SolutionImage({ src, alt }: SolutionImageProps) {
         src={src}
         alt={alt}
         onClick={() => setOpen(true)}
-        className="max-h-[36rem] w-full cursor-zoom-in rounded-xl border border-line object-contain"
+        className={`${heightClass} w-full cursor-zoom-in rounded-xl border border-line object-contain`}
       />
       {open && (
         <div

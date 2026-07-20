@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Statement } from "@/components/Statement";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { aiPhase } from "@/lib/domain";
@@ -12,6 +13,10 @@ export const dynamic = "force-dynamic";
  * Revision stream: the user's own solutions, rendered large and grouped by
  * topic, for the last pass before the exam. Reading surface, not management —
  * uploads and deletes stay on the problem page.
+ *
+ * On wide screens each card splits in two: the statement on the left, the
+ * solution on the right, so you can re-read the cerință while looking at your
+ * own work instead of scrolling between them.
  *
  * Past-due AI solutions are hidden here exactly as they are on the problem
  * page (business rule 4): the 72h reset must not be escapable by a detour.
@@ -35,7 +40,7 @@ export default async function RevizuirePage({
     relationLoadStrategy: "join",
     include: {
       problem: {
-        omit: { correctAnswer: true, latex: true },
+        omit: { correctAnswer: true },
         include: {
           exam: true,
           tags: { select: { name: true } },
@@ -77,19 +82,19 @@ export default async function RevizuirePage({
     : visible;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-[110rem] space-y-6">
       <header className="space-y-1">
         <h1 className="font-display text-3xl font-extrabold tracking-tight">
           Revizuire
         </h1>
-        <p className="text-sm text-muted">
-          Rezolvările tale, mari și grupate pe tip — pentru recapitularea
-          finală. Încărcările și ștergerile rămân pe pagina problemei.
+        <p className="max-w-2xl text-sm text-muted">
+          Rezolvările tale, cu enunțul alături — pentru recapitularea finală.
+          Încărcările și ștergerile rămân pe pagina problemei.
         </p>
       </header>
 
       {visible.length === 0 ? (
-        <p className="card p-5 text-sm text-muted">
+        <p className="card max-w-2xl p-5 text-sm text-muted">
           Nicio soluție de revizuit încă. Intră pe o problemă și încarcă un PDF
           sau o poză cu rezolvarea ta.
           {hiddenCount > 0 &&
@@ -122,14 +127,14 @@ export default async function RevizuirePage({
           )}
 
           {shown.length === 0 ? (
-            <p className="card p-5 text-sm text-muted">
+            <p className="card max-w-2xl p-5 text-sm text-muted">
               Nicio soluție pentru tipul ăsta.
             </p>
           ) : (
-            <div className="space-y-5">
+            <div className="space-y-6">
               {shown.map((s) => (
-                <article key={s.id} className="card space-y-3 p-4">
-                  <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <article key={s.id} className="card space-y-4 p-4 xl:p-5">
+                  <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-line pb-3">
                     <Link
                       href={problemHref(s.problem)}
                       className="font-display text-base font-bold hover:underline"
@@ -139,7 +144,16 @@ export default async function RevizuirePage({
                     <span className="text-xs text-faint">
                       {examLabel(s.problem.exam)}
                     </span>
-                    <div className="ml-auto flex items-center gap-2 text-xs">
+                    {s.problem.tags.map((t) => (
+                      <Link
+                        key={t.name}
+                        href={`/revizuire?tag=${encodeURIComponent(t.name)}`}
+                        className="rounded-full border border-line px-2 py-0.5 text-[11px] font-medium text-muted transition-colors hover:border-ink/20 hover:text-ink"
+                      >
+                        {t.name}
+                      </Link>
+                    ))}
+                    <div className="ml-auto flex shrink-0 items-center gap-2 text-xs">
                       <time className="tabular-nums text-faint">
                         {formatDate(s.submittedAt)}
                       </time>
@@ -155,32 +169,27 @@ export default async function RevizuirePage({
                     </div>
                   </header>
 
-                  {s.problem.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {s.problem.tags.map((t) => (
-                        <Link
-                          key={t.name}
-                          href={`/revizuire?tag=${encodeURIComponent(t.name)}`}
-                          className="rounded-full border border-line px-2 py-0.5 text-[11px] font-medium text-muted transition-colors hover:border-ink/20 hover:text-ink"
-                        >
-                          {t.name}
-                        </Link>
-                      ))}
+                  <div className="grid gap-5 xl:grid-cols-[minmax(20rem,32rem)_minmax(0,1fr)]">
+                    <div className="min-w-0 overflow-x-auto text-sm leading-relaxed">
+                      <Statement latex={s.problem.latex} />
                     </div>
-                  )}
 
-                  {solutionIsImage(s.pdfPath) ? (
-                    <SolutionImage
-                      src={`/api/solutions/${s.id}`}
-                      alt={`Rezolvarea ta la problema ${s.problem.number}`}
-                    />
-                  ) : (
-                    <iframe
-                      src={`/api/solutions/${s.id}`}
-                      title={`Rezolvarea ta la problema ${s.problem.number}`}
-                      className="h-[36rem] w-full rounded-xl border border-line"
-                    />
-                  )}
+                    <div className="min-w-0">
+                      {solutionIsImage(s.pdfPath) ? (
+                        <SolutionImage
+                          src={`/api/solutions/${s.id}`}
+                          alt={`Rezolvarea ta la problema ${s.problem.number}`}
+                          heightClass="max-h-[36rem] xl:max-h-[52rem]"
+                        />
+                      ) : (
+                        <iframe
+                          src={`/api/solutions/${s.id}`}
+                          title={`Rezolvarea ta la problema ${s.problem.number}`}
+                          className="h-[36rem] w-full rounded-xl border border-line xl:h-[52rem]"
+                        />
+                      )}
+                    </div>
+                  </div>
                 </article>
               ))}
             </div>
@@ -205,7 +214,7 @@ function Chip({
       href={href}
       className={`rounded-full border px-3 py-1 text-xs font-semibold tabular-nums transition-colors ${
         active
-          ? "border-ink bg-ink text-paper"
+          ? "border-ink bg-ink text-white"
           : "border-line bg-card text-muted shadow-soft hover:border-ink/20 hover:text-ink"
       }`}
     >

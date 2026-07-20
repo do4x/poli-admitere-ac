@@ -13,6 +13,7 @@
     "import:answers": "tsx scripts/import-answers.ts",
     "export:problems": "tsx scripts/export-problems.ts",
     "export:missing": "tsx scripts/export-missing-answers.ts",
+    "export:stats": "tsx scripts/export-user-stats.ts",
     "split:batches": "tsx scripts/split-batches.ts",
     "compile:answers": "tsx scripts/compile-answers.ts",
     "check:answers": "tsx scripts/check-answers.ts",

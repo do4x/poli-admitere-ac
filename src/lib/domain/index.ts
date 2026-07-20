@@ -1,5 +1,10 @@
 export { aiPhase, type AiMarkLike, type AiPhase } from "./aiMark";
 export {
+  attemptDuration,
+  DEFAULT_MAX_GAP_MS,
+  type TimedAttempt,
+} from "./attemptDuration";
+export {
   REVIEW_DELAY_MS,
   isIndependent,
   hasIndependentSolution,

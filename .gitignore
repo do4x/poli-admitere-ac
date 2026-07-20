@@ -41,6 +41,9 @@ tsconfig.tsbuildinfo
 # local planning / scratch — keep out of the public repo
 .ultraplan/
 TODO*.md
-
+IDEAS.md
 .vercel
 .env*
+
+# per-user stats exports: real emails, user ids and practice history
+export/

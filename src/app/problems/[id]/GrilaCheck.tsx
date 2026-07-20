@@ -100,8 +100,7 @@ export function GrilaCheck({
                 {solvedChoice})
               </span>
             </>
-          )}{" "}
-          — grila e închisă pentru această problemă.
+          )}
         </p>
       ) : (
         <form
@@ -143,13 +142,15 @@ export function GrilaCheck({
             >
               {pending ? "Se verifică…" : "Verifică răspunsul"}
             </button>
-            <span className="text-xs text-faint">
-              {selected === null
-                ? "Alege o variantă, apoi verifică."
-                : selected === sent
-                  ? "Alege altă variantă ca să mai verifici o dată."
-                  : `Verifici varianta ${selected}).`}
-            </span>
+            {/* Nothing to say once a fresh choice is picked — the highlighted
+                letter and the live button already say it. */}
+            {(selected === null || selected === sent) && (
+              <span className="text-xs text-faint">
+                {selected === null
+                  ? "Alege o variantă, apoi verifică."
+                  : "Alege altă variantă ca să mai verifici o dată."}
+              </span>
+            )}
           </div>
         </form>
       )}

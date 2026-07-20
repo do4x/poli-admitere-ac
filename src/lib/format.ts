@@ -12,12 +12,20 @@ export function examLabel(exam: ExamLabelInput): string {
   return `${kind} ${subject} ${exam.year}${session}`;
 }
 
+/** Every user is in Romania and the server runs in UTC — pin the zone so a
+ *  12:18 upload never renders as 09:18. */
+const TIME_ZONE = "Europe/Bucharest";
+
 const DATE_TIME = new Intl.DateTimeFormat("ro-RO", {
   dateStyle: "medium",
   timeStyle: "short",
+  timeZone: TIME_ZONE,
 });
 
-const DATE_ONLY = new Intl.DateTimeFormat("ro-RO", { dateStyle: "medium" });
+const DATE_ONLY = new Intl.DateTimeFormat("ro-RO", {
+  dateStyle: "medium",
+  timeZone: TIME_ZONE,
+});
 
 export function formatDateTime(date: Date): string {
   return DATE_TIME.format(date);

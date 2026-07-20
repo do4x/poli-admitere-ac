@@ -17,6 +17,7 @@ const LINKS: {
   { href: "/", label: "Panou", exact: true, requires: "user" },
   { href: "/exams", label: "Examene" },
   { href: "/probleme", label: "Probleme" },
+  { href: "/revizuire", label: "Revizuire", requires: "user" },
   { href: "/import", label: "Import", requires: "admin" },
   { href: "/cont", label: "Cont", requires: "user" },
 ];

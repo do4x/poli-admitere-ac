@@ -4,7 +4,13 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { CATALOG_TAG } from "@/app/probleme/query";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { aiPhase, computeAiDueAt, grilaLocked } from "@/lib/domain";
+import {
+  aiPhase,
+  computeAiDueAt,
+  grilaLocked,
+  hintAt,
+  splitHints,
+} from "@/lib/domain";
 import {
   MAX_SOLUTION_BYTES,
   QUOTA_MAX_BYTES,
@@ -392,6 +398,44 @@ function revalidateProblemTags(problemId: string): void {
 }
 
 /** Attach an existing tag to a problem (from the dropdown). */
+/**
+ * Open a hint (1 = the signal, 2 = the move) and record it.
+ *
+ * Idempotent per (user, problem, level): re-opening an already-open hint must
+ * not stamp a second, later reveal, or simply re-reading it would keep pushing
+ * the taint forward past answers you had already earned.
+ *
+ * Level 2 is admin-only for now, like the grading it comes from — enforced
+ * here and not just in the UI, since a server action is a public endpoint.
+ */
+export async function revealHintAction(
+  problemId: string,
+  level: number,
+): Promise<void> {
+  const user = await getSessionUser();
+  if (!user) return;
+  if (level !== 1 && level !== 2) return;
+  if (level === 2 && !user.isAdmin) return;
+
+  const difficulty = await prisma.difficulty.findUnique({
+    where: { problemId },
+    select: { trigger: true },
+  });
+  // No grading, or one that cannot be halved ⇒ there is no hint to open.
+  if (!hintAt(splitHints(difficulty?.trigger), level)) return;
+
+  await prisma.hintReveal.upsert({
+    where: {
+      problemId_userId_level: { problemId, userId: user.id, level },
+    },
+    create: { problemId, userId: user.id, level },
+    update: {},
+  });
+
+  revalidateProblem(problemId);
+  revalidatePath("/");
+}
+
 export async function addTagAction(
   problemId: string,
   _previous: TagActionState,

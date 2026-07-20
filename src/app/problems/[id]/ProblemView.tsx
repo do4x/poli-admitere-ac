@@ -8,9 +8,12 @@ import {
   aiPhase,
   grilaCountsAsDone,
   grilaLocked,
+  hintAt,
   REVIEW_DELAY_HOURS,
+  splitHints,
   visibleAttempts,
   solveState,
+  withHintTaint,
   type SolveState,
 } from "@/lib/domain";
 import { examLabel, formatDateTime, solutionIsImage } from "@/lib/format";
@@ -19,6 +22,7 @@ import { subjectStyle } from "@/lib/subjects";
 import { AiMarkControl } from "./AiMarkControl";
 import { DeleteSolutionButton } from "./DeleteSolutionButton";
 import { GrilaCheck } from "./GrilaCheck";
+import { HintPanel } from "./HintPanel";
 import { resolveNeighbors } from "./resolveNeighbors";
 import { SolutionImage } from "./SolutionImage";
 import { TagEditor } from "./TagEditor";
@@ -56,7 +60,14 @@ export async function ProblemView({
       },
       attempts: {
         where: { userId: user?.id ?? "" },
-        select: { id: true, kind: true, choice: true, correct: true },
+        // createdAt travels so opened hints can be interleaved by time.
+        select: {
+          id: true,
+          kind: true,
+          choice: true,
+          correct: true,
+          createdAt: true,
+        },
         orderBy: { createdAt: "asc" },
       },
     },
@@ -86,14 +97,43 @@ export async function ProblemView({
         select: { dueAt: true, redeemedAt: true },
       })
     : null;
-  // Difficulty grading is admin-only for now, so non-admins never pay for the
-  // extra round trip.
-  const difficulty = user?.isAdmin
-    ? await prisma.difficulty.findUnique({ where: { problemId: problem.id } })
-    : null;
+  // The grading is fetched for everyone now — hint 1 comes out of it — but only
+  // admins see the stars, the archetype and the full trigger.
+  const [difficulty, hintRows] = await Promise.all([
+    prisma.difficulty.findUnique({ where: { problemId: problem.id } }),
+    user
+      ? prisma.hintReveal.findMany({
+          where: { problemId: problem.id, userId: user.id },
+          select: { level: true, revealedAt: true },
+        })
+      : Promise.resolve([]),
+  ]);
+
+  // Opened hints count as reveals from the moment they were opened, so state,
+  // the 2-try rule and the lock all read the merged stream — never the raw one.
+  const attempts = withHintTaint(
+    problem.attempts,
+    hintRows.map((h) => h.revealedAt),
+  );
+
+  // The trigger is no longer printed on the page: it is served as two hints,
+  // so seeing the idea is always a deliberate act — for admins too.
+  const hints = splitHints(difficulty?.trigger);
+  const openedLevels = new Set(hintRows.map((h) => h.level));
+  const hintSlots =
+    user && hints
+      ? // Level 2 is the move itself, still admin-only like the grading.
+        (user.isAdmin ? [1, 2] : [1]).map((level) => ({
+          level,
+          label: `Indiciu ${level}`,
+          // A closed hint's text is never sent to the client.
+          text: openedLevels.has(level) ? hintAt(hints, level) : null,
+          opened: openedLevels.has(level),
+        }))
+      : [];
 
   const now = new Date();
-  const state = solveState(problem.solutions, problem.attempts, aiMark, now);
+  const state = solveState(problem.solutions, attempts, aiMark, now);
   const phase = aiPhase(aiMark, now);
   // Past-due AI solutions hide until the problem is re-solved (redemption).
   const visibleSolutions =
@@ -200,20 +240,25 @@ export async function ProblemView({
               {tag.name}
             </span>
           ))}
-          {difficulty && (
-            <DifficultyBadge difficulty={difficulty} size="md" showTime />
+          {user?.isAdmin && difficulty && (
+            // Narrowed on purpose: passing the whole row would ship `trigger`
+            // — the hint text — in the RSC payload of a closed hint.
+            <DifficultyBadge
+              difficulty={{
+                level: difficulty.level,
+                dRaw: difficulty.dRaw,
+                bandMargin: difficulty.bandMargin,
+                archetype: difficulty.archetype,
+                targetMinutes: difficulty.targetMinutes,
+              }}
+              size="md"
+              showTime
+            />
+          )}
+          {user?.isAdmin && difficulty?.uncertain && (
+            <span className="text-xs text-amber-600">(gradare incertă)</span>
           )}
         </div>
-
-        {difficulty?.trigger && (
-          <p className="mt-2 max-w-3xl text-xs text-muted">
-            <span className="font-semibold text-faint">Declanșator: </span>
-            {difficulty.trigger}
-            {difficulty.uncertain && (
-              <span className="ml-2 text-amber-600">(gradare incertă)</span>
-            )}
-          </p>
-        )}
       </div>
 
       <section className="card p-6">
@@ -255,9 +300,9 @@ export async function ProblemView({
           problemId={problem.id}
           verified={state === "grila"}
           countsTowardGoal={
-            grilaCountsAsDone(problem.attempts) || aiMark?.redeemedAt != null
+            grilaCountsAsDone(attempts) || aiMark?.redeemedAt != null
           }
-          locked={grilaLocked(problem.attempts, phase)}
+          locked={grilaLocked(attempts, phase)}
           redemption={phase === "due"}
           history={grilaHistory}
           revealedAnswer={revealed ? (keyRow?.correctAnswer ?? null) : null}
@@ -270,6 +315,12 @@ export async function ProblemView({
           </p>
         </section>
       ) : null}
+
+      <HintPanel
+        problemId={problem.id}
+        hints={hintSlots}
+        tainted={openedLevels.size > 0}
+      />
 
       {user && (
       <section className="space-y-4">

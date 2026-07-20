@@ -1,6 +1,11 @@
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/db";
-import type { AiMarkLike, AttemptLike } from "@/lib/domain";
+import {
+  withHintTaint,
+  type AiMarkLike,
+  type AttemptLike,
+  type TimedAttemptLike,
+} from "@/lib/domain";
 
 /**
  * Cache tag for the shared problem catalog. Every admin mutation that changes
@@ -126,27 +131,52 @@ async function fetchUserState(userId: string | undefined): Promise<UserState> {
   const aiMarks = new Map<string, UserAiMark>();
   if (!userId) return { solutions, attempts, aiMarks };
 
-  const [solutionRows, attemptRows, markRows] = await Promise.all([
+  const [solutionRows, attemptRows, markRows, hintRows] = await Promise.all([
     prisma.solution.findMany({
       where: { userId },
       select: { problemId: true, aiAssisted: true },
     }),
     prisma.answerAttempt.findMany({
       where: { userId },
-      select: { problemId: true, kind: true, correct: true },
+      // createdAt travels so opened hints can be interleaved by time.
+      select: { problemId: true, kind: true, correct: true, createdAt: true },
       orderBy: { createdAt: "asc" },
     }),
     prisma.aiMark.findMany({
       where: { userId },
       select: { problemId: true, dueAt: true, redeemedAt: true },
     }),
+    prisma.hintReveal.findMany({
+      where: { userId },
+      select: { problemId: true, revealedAt: true },
+    }),
   ]);
 
   for (const { problemId, ...solution } of solutionRows) {
     groupInto(solutions, problemId, solution);
   }
+
+  // Hints are folded into the attempt stream as REVEALs, so every downstream
+  // rule (state, counter, 2-try limit) treats them as the help they are.
+  const hintsByProblem = new Map<string, Date[]>();
+  for (const { problemId, revealedAt } of hintRows) {
+    groupInto(hintsByProblem, problemId, revealedAt);
+  }
+  const timedByProblem = new Map<string, TimedAttemptLike[]>();
   for (const { problemId, ...attempt } of attemptRows) {
-    groupInto(attempts, problemId, attempt);
+    groupInto(timedByProblem, problemId, attempt);
+  }
+  for (const problemId of new Set([
+    ...timedByProblem.keys(),
+    ...hintsByProblem.keys(),
+  ])) {
+    attempts.set(
+      problemId,
+      withHintTaint(
+        timedByProblem.get(problemId) ?? [],
+        hintsByProblem.get(problemId) ?? [],
+      ),
+    );
   }
   for (const { problemId, ...mark } of markRows) {
     aiMarks.set(problemId, mark);

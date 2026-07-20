@@ -17,6 +17,7 @@ model User {
   solutions Solution[]
   attempts  AnswerAttempt[]
   aiMarks   AiMark[]
+  hints     HintReveal[]
 }
 
 enum ExamKind {
@@ -54,6 +55,7 @@ model Problem {
   solutions     Solution[]
   attempts      AnswerAttempt[]
   aiMarks       AiMark[]
+  hints         HintReveal[]
   tags          Tag[]
   difficulty    Difficulty?
   createdAt     DateTime        @default(now())
@@ -136,6 +138,23 @@ model AnswerAttempt {
   createdAt DateTime    @default(now())
 
   @@index([userId, problemId])
+}
+
+// One row per hint a user opened on a problem. Hints are the two halves of the
+// grading's `trigger`: level 1 = the signal to spot, level 2 = the move.
+// A reveal is permanent and, like AnswerAttempt.REVEAL, taints every LATER
+// grila answer — after a hint, a correct choice no longer proves anything.
+model HintReveal {
+  id         String   @id @default(cuid())
+  problemId  String
+  problem    Problem  @relation(fields: [problemId], references: [id])
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  level      Int // 1 = semnalul, 2 = mișcarea
+  revealedAt DateTime @default(now())
+
+  @@unique([problemId, userId, level])
+  @@index([userId])
 }
 
 model Tag {

@@ -56,6 +56,14 @@ export {
   type GradedDifficulty,
 } from "./difficulty";
 export {
+  MAX_HINT_LEVEL,
+  hintAt,
+  splitHints,
+  withHintTaint,
+  type Hints,
+  type TimedAttemptLike,
+} from "./hints";
+export {
   DEFAULT_SORT,
   SORT_KEYS,
   needsDifficulty,

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { grilaCountsAsDone, grilaLocked, solveState } from "./solveState";
+import {
+  grilaCountsAsDone,
+  grilaLocked,
+  solveState,
+  visibleAttempts,
+} from "./solveState";
 
 const independent = { aiAssisted: false };
 const aiAssisted = { aiAssisted: true };
@@ -115,12 +120,31 @@ describe("grilaLocked — one correct answer closes the grila (2026-07-20)", () 
   });
 });
 
+describe("visibleAttempts — a reset forgets the answer (2026-07-20)", () => {
+  const history = [wrong, correct] as const;
+
+  it("hides everything while the grila is reopened by a reset", () => {
+    expect(visibleAttempts(history, "due")).toEqual([]);
+  });
+
+  it("shows everything in every other phase, including none at all", () => {
+    expect(visibleAttempts(history, null)).toEqual(history);
+    expect(visibleAttempts(history, "window")).toEqual(history);
+    expect(visibleAttempts(history, "redeemed")).toEqual(history);
+  });
+
+  it("pairs with grilaLocked: hidden history, open grila", () => {
+    expect(visibleAttempts(history, "due")).toEqual([]);
+    expect(grilaLocked(history, "due")).toBe(false);
+  });
+});
+
 describe("solveState — AI marks (owner revision 2026-07-18)", () => {
   const NOW = new Date("2026-04-10T09:00:00.000Z");
   const PAST = new Date("2026-04-09T09:00:00.000Z");
   const FUTURE = new Date("2026-04-11T09:00:00.000Z");
 
-  it("is 'doar_ai' inside the 72h window, even without an upload", () => {
+  it("is 'doar_ai' inside the re-solve window, even without an upload", () => {
     expect(solveState([], [], { dueAt: FUTURE, redeemedAt: null }, NOW)).toBe(
       "doar_ai",
     );

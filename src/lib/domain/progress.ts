@@ -22,7 +22,7 @@ export interface ProblemProgressInput {
  * Owner decision (2026-07-15): a quick grila check counts toward progress even
  * when no written solution was submitted. Needing 3+ tries means you were
  * guessing: "grila" status but still remaining. Owner revision (2026-07-18):
- * redeeming an AI mark — a correct grila answer after the 72h window — counts
+ * redeeming an AI mark — a correct grila answer after the re-solve window — counts
  * regardless of the number of tries; solving with AI alone still never counts.
  */
 export function isDone(

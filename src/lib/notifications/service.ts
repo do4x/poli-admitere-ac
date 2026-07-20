@@ -10,7 +10,7 @@ export interface DueReviewRunSummary {
 
 /**
  * Production wiring for checkDueReviews, per user: each user with AI marks
- * past their 72h window gets ONE digest to their own email. The engine's
+ * past their re-solve window gets ONE digest to their own email. The engine's
  * notifiedAt dedupe is unchanged.
  */
 export async function runDueReviewChecks(): Promise<DueReviewRunSummary> {

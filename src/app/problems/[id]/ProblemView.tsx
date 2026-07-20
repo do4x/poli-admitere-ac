@@ -7,6 +7,8 @@ import {
   aiPhase,
   grilaCountsAsDone,
   grilaLocked,
+  REVIEW_DELAY_HOURS,
+  visibleAttempts,
   solveState,
   type SolveState,
 } from "@/lib/domain";
@@ -103,9 +105,17 @@ export async function ProblemView({
   });
   const hasKey = keyRow?.correctAnswer != null;
   const revealed = problem.attempts.some((a) => a.kind === "REVEAL");
-  const grilaHistory = problem.attempts
+  // A reset AI mark reopens the grila, so the old attempts must not travel to
+  // the client at all: the `e ✓` in that list IS the answer, and reading it
+  // off the screen is not re-solving anything. They come back on redemption,
+  // like the hidden AI solutions do.
+  const grilaHistory = visibleAttempts(problem.attempts, phase)
     .filter((a) => a.kind === "CHOICE" && a.choice !== null)
-    .map((a) => ({ id: a.id, choice: a.choice as string, correct: a.correct === true }));
+    .map((a) => ({
+      id: a.id,
+      choice: a.choice as string,
+      correct: a.correct === true,
+    }));
 
   return (
     <div className="space-y-5">
@@ -193,8 +203,8 @@ export async function ProblemView({
       {phase === "due" && (
         <section className="rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-sm text-rose-800 shadow-soft">
           <p className="font-semibold">
-            Au trecut 72 de ore de când ai rezolvat-o cu AI — statutul s-a
-            resetat.
+            Au trecut {REVIEW_DELAY_HOURS} de ore de când ai rezolvat-o cu AI —
+            statutul s-a resetat.
           </p>
           <p className="mt-1">
             Rezolv-o acum corect la grilă (indiferent din câte încercări, dar
@@ -202,7 +212,9 @@ export async function ProblemView({
             contează
             {hiddenAiCount > 0
               ? ", iar rezolvarea încărcată atunci reapare."
-              : "."}
+              : "."}{" "}
+            Încercările de dinainte sunt ascunse, ca să nu-ți spună ele
+            răspunsul.
           </p>
         </section>
       )}

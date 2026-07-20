@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { REVIEW_DELAY_HOURS } from "@/lib/domain";
 import { markAiAction, unmarkAiAction, type AiMarkState } from "./actions";
 
 const INITIAL: AiMarkState = { error: null };
@@ -14,7 +15,7 @@ interface AiMarkControlProps {
 }
 
 /**
- * "Am rezolvat cu AI" without uploading anything. Marking opens the 72h
+ * "Am rezolvat cu AI" without uploading anything. Marking opens the re-solve
  * window after which the problem resets and must be re-solved to count.
  */
 export function AiMarkControl({ problemId, dueLabel, canUnmark }: AiMarkControlProps) {
@@ -37,8 +38,8 @@ export function AiMarkControl({ problemId, dueLabel, canUnmark }: AiMarkControlP
               Ai rezolvat-o cu AI, fără să încarci rezolvarea?
             </p>
             <p className="mt-0.5 text-xs text-muted">
-              Marcheaz-o — în 72 de ore se resetează și va trebui să o rezolvi
-              din nou, singur, ca să conteze.
+              Marcheaz-o — în {REVIEW_DELAY_HOURS} de ore se resetează și va
+              trebui să o rezolvi din nou, singur, ca să conteze.
             </p>
           </div>
           <form action={markFormAction}>

@@ -1,6 +1,10 @@
-/** Rule 4 (owner revision 2026-07-18): anything solved with AI must be
- *  re-solved independently 72 hours later — down from the original 4 days. */
-export const REVIEW_DELAY_MS = 72 * 60 * 60 * 1000;
+/** Rule 4: anything solved with AI must be re-solved independently once this
+ *  window closes. 4 days originally, 72h on 2026-07-18, 48h on 2026-07-20 —
+ *  the reset is also what reopens a locked grila, so it has to come round
+ *  while the problem is still fresh enough to be worth re-testing.
+ *  Every user-facing "în N ore" string reads the hours from here. */
+export const REVIEW_DELAY_HOURS = 48;
+export const REVIEW_DELAY_MS = REVIEW_DELAY_HOURS * 60 * 60 * 1000;
 
 /** Rule 1: independent = not AI-assisted. */
 export function isIndependent(solution: { aiAssisted: boolean }): boolean {

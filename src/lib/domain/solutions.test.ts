@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  REVIEW_DELAY_HOURS,
   REVIEW_DELAY_MS,
   computeAiDueAt,
   hasIndependentSolution,
@@ -38,16 +39,17 @@ describe("hasIndependentSolution (rule 2)", () => {
   });
 });
 
-describe("computeAiDueAt (rule 4, 72h revision 2026-07-18)", () => {
+describe("computeAiDueAt (rule 4, 48h revision 2026-07-20)", () => {
   const markedAt = new Date("2026-03-10T14:30:00.000Z");
 
-  it("is exactly 72 hours after the mark", () => {
+  it("is exactly 48 hours after the mark", () => {
     const due = computeAiDueAt(markedAt);
-    expect(due.getTime() - markedAt.getTime()).toBe(72 * 60 * 60 * 1000);
-    expect(due.toISOString()).toBe("2026-03-13T14:30:00.000Z");
+    expect(due.getTime() - markedAt.getTime()).toBe(48 * 60 * 60 * 1000);
+    expect(due.toISOString()).toBe("2026-03-12T14:30:00.000Z");
   });
 
-  it("REVIEW_DELAY_MS is exactly 3 days", () => {
-    expect(REVIEW_DELAY_MS).toBe(3 * 24 * 60 * 60 * 1000);
+  it("REVIEW_DELAY_MS is exactly 2 days", () => {
+    expect(REVIEW_DELAY_MS).toBe(2 * 24 * 60 * 60 * 1000);
+    expect(REVIEW_DELAY_HOURS).toBe(48);
   });
 });

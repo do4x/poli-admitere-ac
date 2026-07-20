@@ -8,7 +8,7 @@ export type AiPhase = "window" | "due" | "redeemed";
 
 /**
  * Where a user's AI mark stands at `now`:
- * - "window"   — inside the 72h re-solve window; the problem shows "doar cu AI".
+ * - "window"   — inside the re-solve window; the problem shows "doar cu AI".
  * - "due"      — window passed, not redeemed: the problem resets to unsolved
  *                and its AI solutions hide until redemption.
  * - "redeemed" — a correct grila answer after dueAt (untainted by reveal) or

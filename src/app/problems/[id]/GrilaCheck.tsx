@@ -71,6 +71,13 @@ export function GrilaCheck({
         )}
       </div>
 
+      {redemption && (
+        <p className="text-xs text-muted">
+          Grila s-a redeschis de la zero — încercările de dinainte de resetare
+          nu se mai văd.
+        </p>
+      )}
+
       {verified && !countsTowardGoal && (
         <p className="text-xs text-amber-700">
           Răspunsul corect a venit după mai mult de 2 încercări — nu contează

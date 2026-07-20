@@ -17,7 +17,7 @@ export interface AttemptLike {
  * - AI mark redeemed               → "singur" when an uploaded solution backs
  *                                     it ("the initial submission reappears"),
  *                                     otherwise "grila" (rezolvat pe grilă)
- * - AI mark inside its 72h window  → "doar_ai"
+ * - AI mark inside its re-solve window  → "doar_ai"
  * - AI mark past due, unredeemed   → "nerezolvata" (the reset — de refăcut)
  * - AI solutions, no mark (legacy) → "doar_ai"
  * - correct grila answer submitted
@@ -80,6 +80,22 @@ export function grilaLocked(
 ): boolean {
   if (phase === "due") return false;
   return attempts.some((a) => a.kind === "CHOICE" && a.correct === true);
+}
+
+/**
+ * The attempts a client is allowed to see. While a reset has reopened the
+ * grila, none of them: the old `e ✓` in that list IS the answer, and reading
+ * it back off the screen is not re-solving anything. They reappear once the
+ * mark is redeemed, exactly like the hidden AI solutions.
+ *
+ * Filtering belongs on the server — hiding the history in the markup would
+ * still ship it.
+ */
+export function visibleAttempts<T extends AttemptLike>(
+  attempts: readonly T[],
+  phase: AiPhase | null,
+): readonly T[] {
+  return phase === "due" ? [] : attempts;
 }
 
 export function grilaCountsAsDone(

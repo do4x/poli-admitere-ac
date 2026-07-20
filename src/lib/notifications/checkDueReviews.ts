@@ -40,7 +40,7 @@ export interface CheckDueReviewsResult {
 }
 
 /**
- * The engine behind the 72h review emails. Stamping happens only after a
+ * The engine behind the AI-reset review emails. Stamping happens only after a
  * successful send, so a failed send retries on the next cycle; a successful
  * send never repeats (notifiedAt dedupe). Deliberate tradeoff: if the send
  * succeeds but stamping fails, the digest repeats next cycle (at-least-once)

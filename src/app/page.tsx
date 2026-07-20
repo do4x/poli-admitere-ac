@@ -50,7 +50,7 @@ export default async function DashboardPage() {
       solveState(p.solutions, p.attempts, p.aiMark, now) === "grila",
   );
   // 1st/2nd-try checks count as done; so does redeeming an AI mark after its
-  // 72h window. 3+ tries without a mark = guessed, still remaining.
+  // re-solve window. 3+ tries without a mark = guessed, still remaining.
   const grilaVerified = grilaProblems.filter(
     (p) => grilaCountsAsDone(p.attempts) || p.aiMark?.redeemedAt != null,
   ).length;

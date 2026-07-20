@@ -69,7 +69,7 @@ describe("digest", () => {
     expect(digest.text.match(/pb7-mate/g)).toHaveLength(1);
   });
 
-  it("explains the 72h reset and the way back", () => {
+  it("explains the AI reset and the way back", () => {
     const digest = buildDigest([{ id: "x", number: "1", exam }]);
     expect(digest.text).toContain("Au trecut 3 zile");
     expect(digest.text).toContain("grilă");

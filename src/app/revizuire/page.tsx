@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
  * own work instead of scrolling between them.
  *
  * Past-due AI solutions are hidden here exactly as they are on the problem
- * page (business rule 4): the 72h reset must not be escapable by a detour.
+ * page (business rule 4): the AI reset must not be escapable by a detour.
  */
 
 const UNTAGGED = "Fără tip";

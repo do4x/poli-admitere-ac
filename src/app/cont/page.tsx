@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { aiPhase, grilaCountsAsDone, solveState } from "@/lib/domain";
+import {
+  aiPhase,
+  grilaCountsAsDone,
+  REVIEW_DELAY_HOURS,
+  solveState,
+} from "@/lib/domain";
 import {
   examLabel,
   formatDate,
@@ -30,7 +35,7 @@ export default async function ContPage() {
   const totalBytes = solutions.reduce((sum, s) => sum + s.sizeBytes, 0);
 
   // Problems that need an independent re-solve to actually count: AI marks
-  // past their 72h window (the reset), AI marks still in the window, and
+  // past their re-solve window (the reset), AI marks still in the window, and
   // grila checks guessed in 3+ tries. No latex needed here — just enough to
   // identify and label each row.
   const redoCandidates = await prisma.problem.findMany({
@@ -182,7 +187,7 @@ export default async function ContPage() {
           <p className="mt-0.5 text-xs text-muted">
             Rezolvate cu ajutorul AI sau ghicite pe grilă din 3+ încercări — nu
             contează până nu le rezolvi din nou tu: corect la grilă (după ce
-            trec cele 72h) sau cu propria rezolvare încărcată.
+            trec cele {REVIEW_DELAY_HOURS}h) sau cu propria rezolvare încărcată.
           </p>
         </div>
         {toRedo.length === 0 ? (

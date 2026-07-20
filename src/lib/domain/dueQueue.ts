@@ -14,7 +14,7 @@ export interface DueProblemInput {
 }
 
 /**
- * Rule 5 (2026-07-18 revision): the due queue — AI marks past their 72h
+ * Rule 5 (2026-07-18 revision): the due queue — AI marks past their re-solve
  * window, on problems that still have no independent solution and were not
  * redeemed via grila. Redemption (stamped server-side) or an independent
  * upload clears the problem from the queue permanently.

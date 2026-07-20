@@ -116,7 +116,7 @@ export async function uploadSolution(
   }
 
   if (aiAssisted) {
-    // An AI upload opens (or joins) the 72h re-solve window. An existing mark
+    // An AI upload opens (or joins) the re-solve window. An existing mark
     // keeps its original clock — re-uploading never postpones the deadline.
     await prisma.aiMark.upsert({
       where: {
@@ -149,7 +149,7 @@ export interface AiMarkState {
   error: string | null;
 }
 
-/** "Am rezolvat cu AI" without an upload: opens the 72h re-solve window. */
+/** "Am rezolvat cu AI" without an upload: opens the re-solve window. */
 export async function markAiAction(
   problemId: string,
   _previous: AiMarkState,
@@ -330,7 +330,7 @@ export async function submitAnswerAction(
   });
 
   if (correct) {
-    // Redemption: a correct answer AFTER the 72h window closes settles the AI
+    // Redemption: a correct answer AFTER the re-solve window closes settles the AI
     // mark — any number of tries, but never once the key was revealed.
     if (
       mark &&

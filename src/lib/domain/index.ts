@@ -5,6 +5,7 @@ export {
   type TimedAttempt,
 } from "./attemptDuration";
 export {
+  REVIEW_DELAY_HOURS,
   REVIEW_DELAY_MS,
   isIndependent,
   hasIndependentSolution,
@@ -27,6 +28,7 @@ export {
   GRILA_MAX_TRIES,
   grilaCountsAsDone,
   grilaLocked,
+  visibleAttempts,
   solveState,
   type AttemptLike,
   type SolveState,

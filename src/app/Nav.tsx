@@ -27,7 +27,7 @@ export function Nav({
   redoCount = 0,
 }: {
   user: NavUser | null;
-  /** Problems whose AI mark passed its 72h window — badge on "Cont". */
+  /** Problems whose AI mark passed its re-solve window — badge on "Cont". */
   redoCount?: number;
 }) {
   const pathname = usePathname();

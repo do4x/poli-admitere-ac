@@ -39,7 +39,7 @@ export default async function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   const days = daysUntilExam();
   const user = await getSessionUser();
-  // The in-site nudge for AI marks past their 72h window. A count is a few
+  // The in-site nudge for AI marks past their re-solve window. A count is a few
   // bytes of egress; redemption/independent uploads stamp redeemedAt, so this
   // needs no joins.
   const redoCount = user

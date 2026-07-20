@@ -100,7 +100,7 @@ export async function Landing() {
   ];
 
   return (
-    <div className="space-y-20 pb-8">
+    <div className="mx-auto max-w-5xl space-y-20 pb-8">
       {/* Hero */}
       <section className="mx-auto max-w-3xl space-y-6 pt-10 text-center">
         <p className="inline-flex items-center gap-2 rounded-full border border-line bg-card px-3 py-1 text-xs font-medium text-muted shadow-soft">

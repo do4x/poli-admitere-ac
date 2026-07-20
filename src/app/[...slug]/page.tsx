@@ -31,10 +31,12 @@ export default async function SlugPage({
     const matches = catalog.filter((p) => matchesParsedSlug(problemSlug, p));
     if (matches.length !== 1) notFound();
     return (
-      <ProblemView
-        problemId={matches[0].id}
-        searchParams={await searchParams}
-      />
+      <div className="mx-auto max-w-5xl">
+        <ProblemView
+          problemId={matches[0].id}
+          searchParams={await searchParams}
+        />
+      </div>
     );
   }
 
@@ -47,7 +49,11 @@ export default async function SlugPage({
         .map((p) => p.exam.id),
     );
     if (examIds.size !== 1) notFound();
-    return <ExamView examId={[...examIds][0]} />;
+    return (
+      <div className="mx-auto max-w-5xl">
+        <ExamView examId={[...examIds][0]} />
+      </div>
+    );
   }
 
   notFound();

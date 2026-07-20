@@ -105,7 +105,7 @@ export default async function ProblemePage({
   }));
 
   return (
-    <div className="space-y-5">
+    <div className="mx-auto max-w-5xl space-y-5">
       <div className="flex items-end justify-between">
         <div>
           <h1 className="font-display text-3xl font-extrabold tracking-tight">

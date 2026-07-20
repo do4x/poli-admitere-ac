@@ -71,7 +71,7 @@ export default async function DashboardPage() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-5xl space-y-6">
       {dueQueue.length > 0 && (
         <section className="overflow-hidden rounded-2xl border border-rose-200 bg-rose-50/80 shadow-soft">
           <div className="flex items-center gap-2 border-b border-rose-200 px-5 py-3">

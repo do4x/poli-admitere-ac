@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export default async function ImportPage() {
   await requireAdmin();
   return (
-    <div className="space-y-4">
+    <div className="mx-auto max-w-5xl space-y-4">
       <div>
         <h1 className="font-display text-3xl font-extrabold tracking-tight">
           Import probleme

@@ -96,7 +96,10 @@ export default async function RootLayout({
             )}
           </div>
         </header>
-        <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
+        {/* No max-width here: each page owns its measure, so a reading
+            surface like /revizuire can use the full width of a wide screen
+            while the rest stay at max-w-5xl. */}
+        <main className="w-full px-4 py-8">{children}</main>
         <footer className="mx-auto max-w-5xl border-t border-line/60 px-4 py-6 text-xs text-faint">
           Enunțurile provin din subiectele oficiale de admitere UPB, publicate
           public. Aplicație independentă, fără afiliere cu universitatea.

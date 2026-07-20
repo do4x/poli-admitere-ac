@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import {
   aiPhase,
   grilaCountsAsDone,
+  grilaLocked,
   solveState,
   type SolveState,
 } from "@/lib/domain";
@@ -224,6 +225,8 @@ export async function ProblemView({
           countsTowardGoal={
             grilaCountsAsDone(problem.attempts) || aiMark?.redeemedAt != null
           }
+          locked={grilaLocked(problem.attempts, phase)}
+          redemption={phase === "due"}
           history={grilaHistory}
           revealedAnswer={revealed ? (keyRow?.correctAnswer ?? null) : null}
         />

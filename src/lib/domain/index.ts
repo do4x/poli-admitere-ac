@@ -26,6 +26,7 @@ export {
 export {
   GRILA_MAX_TRIES,
   grilaCountsAsDone,
+  grilaLocked,
   solveState,
   type AttemptLike,
   type SolveState,

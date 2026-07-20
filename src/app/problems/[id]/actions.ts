@@ -4,7 +4,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { CATALOG_TAG } from "@/app/probleme/query";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { computeAiDueAt } from "@/lib/domain";
+import { aiPhase, computeAiDueAt, grilaLocked } from "@/lib/domain";
 import {
   MAX_SOLUTION_BYTES,
   QUOTA_MAX_BYTES,
@@ -296,6 +296,22 @@ export async function submitAnswerAction(
     return { error: "Răspunsul oficial nu este disponibil pentru această problemă." };
   }
 
+  const answeredAt = new Date();
+  const mark = await prisma.aiMark.findUnique({
+    where: { problemId_userId: { problemId, userId: user.id } },
+    select: { id: true, dueAt: true, redeemedAt: true },
+  });
+  const previous = await prisma.answerAttempt.findMany({
+    where: { problemId, userId: user.id },
+    select: { kind: true, correct: true },
+    orderBy: { createdAt: "asc" },
+  });
+  // The grila closes for good on the first correct answer — re-answering a
+  // solved problem proves nothing (the only way back in is redemption).
+  if (grilaLocked(previous, aiPhase(mark, answeredAt))) {
+    return { error: "Ai găsit deja răspunsul corect la această problemă." };
+  }
+
   const recent = await prisma.answerAttempt.count({
     where: {
       problemId,
@@ -309,7 +325,6 @@ export async function submitAnswerAction(
   }
 
   const correct = choice === problem.correctAnswer;
-  const answeredAt = new Date();
   await prisma.answerAttempt.create({
     data: { problemId, userId: user.id, kind: "CHOICE", choice, correct },
   });
@@ -317,19 +332,12 @@ export async function submitAnswerAction(
   if (correct) {
     // Redemption: a correct answer AFTER the 72h window closes settles the AI
     // mark — any number of tries, but never once the key was revealed.
-    const mark = await prisma.aiMark.findUnique({
-      where: { problemId_userId: { problemId, userId: user.id } },
-      select: { id: true, dueAt: true, redeemedAt: true },
-    });
     if (
       mark &&
       mark.redeemedAt === null &&
       mark.dueAt.getTime() <= answeredAt.getTime()
     ) {
-      const reveals = await prisma.answerAttempt.count({
-        where: { problemId, userId: user.id, kind: "REVEAL" },
-      });
-      if (reveals === 0) {
+      if (!previous.some((a) => a.kind === "REVEAL")) {
         await prisma.aiMark.update({
           where: { id: mark.id },
           data: { redeemedAt: answeredAt },

@@ -22,6 +22,11 @@ interface GrilaCheckProps {
   verified: boolean;
   /** Correct within the first 2 tries — only then it moves the counter. */
   countsTowardGoal: boolean;
+  /** The answer is already found: no more attempts are accepted. */
+  locked: boolean;
+  /** Past-due AI mark: the grila is open again as the redemption path, so
+   *  earlier attempts must not narrow down the choices. */
+  redemption: boolean;
   history: PastChoice[];
   /** The official key, present ONLY after the user chose to reveal it. */
   revealedAnswer: string | null;
@@ -31,6 +36,8 @@ export function GrilaCheck({
   problemId,
   verified,
   countsTowardGoal,
+  locked,
+  redemption,
   history,
   revealedAnswer,
 }: GrilaCheckProps) {
@@ -38,7 +45,20 @@ export function GrilaCheck({
     submitAnswerAction.bind(null, problemId),
     INITIAL,
   );
+  const [selected, setSelected] = useState<string | null>(null);
+  // The last choice actually sent, so the same letter can't be fired twice.
+  const [sent, setSent] = useState<string | null>(null);
   const [confirmingReveal, setConfirmingReveal] = useState(false);
+
+  const solvedChoice = locked
+    ? (history.find((h) => h.correct)?.choice ?? null)
+    : null;
+  // Known-wrong letters stay clickable during redemption — see `redemption`.
+  const wrongTried = new Set(
+    redemption ? [] : history.filter((h) => !h.correct).map((h) => h.choice),
+  );
+  const canSubmit =
+    selected !== null && selected !== sent && !pending && !locked;
 
   return (
     <section className="card space-y-3 p-4">
@@ -70,20 +90,67 @@ export function GrilaCheck({
             </span>
           )}
         </p>
+      ) : locked ? (
+        <p className="text-sm text-muted">
+          Ai răspuns corect
+          {solvedChoice && (
+            <>
+              {" cu "}
+              <span className="font-display text-base font-bold text-teal-700">
+                {solvedChoice})
+              </span>
+            </>
+          )}{" "}
+          — grila e închisă pentru această problemă.
+        </p>
       ) : (
-        <form action={formAction} className="flex flex-wrap items-center gap-1.5">
-          {CHOICES.map((choice) => (
+        <form
+          action={formAction}
+          onSubmit={() => setSent(selected)}
+          className="space-y-3"
+        >
+          <input type="hidden" name="choice" value={selected ?? ""} />
+          <div className="flex flex-wrap items-center gap-1.5">
+            {CHOICES.map((choice) => {
+              const isSelected = selected === choice;
+              const isWrong = wrongTried.has(choice);
+              return (
+                <button
+                  key={choice}
+                  type="button"
+                  onClick={() => setSelected(choice)}
+                  disabled={pending || isWrong}
+                  aria-pressed={isSelected}
+                  title={isWrong ? "Ai încercat deja varianta asta" : undefined}
+                  className={`h-9 w-9 rounded-lg border font-display text-sm font-bold shadow-soft transition-colors disabled:cursor-not-allowed ${
+                    isSelected
+                      ? "border-brand bg-brand text-white"
+                      : isWrong
+                        ? "border-line bg-surface text-faint line-through opacity-60"
+                        : "border-line bg-card text-muted hover:border-brand hover:text-brand-700"
+                  }`}
+                >
+                  {choice}
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
             <button
-              key={choice}
               type="submit"
-              name="choice"
-              value={choice}
-              disabled={pending}
-              className="h-9 w-9 rounded-lg border border-line bg-card font-display text-sm font-bold text-muted shadow-soft transition-colors hover:border-brand hover:text-brand-700 disabled:opacity-50"
+              disabled={!canSubmit}
+              className="rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white shadow-soft transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {choice}
+              {pending ? "Se verifică…" : "Verifică răspunsul"}
             </button>
-          ))}
+            <span className="text-xs text-faint">
+              {selected === null
+                ? "Alege o variantă, apoi verifică."
+                : selected === sent
+                  ? "Alege altă variantă ca să mai verifici o dată."
+                  : `Verifici varianta ${selected}).`}
+            </span>
+          </div>
         </form>
       )}
 
@@ -120,6 +187,7 @@ export function GrilaCheck({
         )}
 
         {!revealedAnswer &&
+          !locked &&
           (confirmingReveal ? (
             <span className="flex items-center gap-2 text-xs text-rose-600">
               Blochează definitiv „verificată pe grilă”.

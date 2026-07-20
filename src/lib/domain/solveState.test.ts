@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { grilaCountsAsDone, solveState } from "./solveState";
+import { grilaCountsAsDone, grilaLocked, solveState } from "./solveState";
 
 const independent = { aiAssisted: false };
 const aiAssisted = { aiAssisted: true };
@@ -83,6 +83,35 @@ describe("grilaCountsAsDone — the 2-try budget (owner decision 2026-07-15)", (
 
   it("a reveal does not consume a try — only choices count", () => {
     expect(grilaCountsAsDone([correct, reveal])).toBe(true);
+  });
+});
+
+describe("grilaLocked — one correct answer closes the grila (2026-07-20)", () => {
+  it("is open while nothing correct has been submitted", () => {
+    expect(grilaLocked([])).toBe(false);
+    expect(grilaLocked([wrong, wrong])).toBe(false);
+  });
+
+  it("locks on the first correct choice, whichever try it came on", () => {
+    expect(grilaLocked([correct])).toBe(true);
+    expect(grilaLocked([wrong, wrong, wrong, correct])).toBe(true);
+  });
+
+  it("stays locked after a reveal — no re-answering a solved problem", () => {
+    expect(grilaLocked([correct, reveal])).toBe(true);
+  });
+
+  it("a reveal alone does not lock: the key is shown, attempts are moot", () => {
+    expect(grilaLocked([reveal])).toBe(false);
+  });
+
+  it("reopens while an AI mark is past due — that is the redemption path", () => {
+    expect(grilaLocked([correct], "due")).toBe(false);
+  });
+
+  it("stays locked in every other AI phase", () => {
+    expect(grilaLocked([correct], "window")).toBe(true);
+    expect(grilaLocked([correct], "redeemed")).toBe(true);
   });
 });
 

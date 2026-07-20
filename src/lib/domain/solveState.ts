@@ -1,4 +1,4 @@
-import { aiPhase, type AiMarkLike } from "./aiMark";
+import { aiPhase, type AiMarkLike, type AiPhase } from "./aiMark";
 import { isIndependent } from "./solutions";
 
 /** The four solve states a problem can be in, for filtering on /probleme. */
@@ -66,6 +66,22 @@ export const GRILA_MAX_TRIES = 2;
  * after it, same as in `solveState`. (Grila redemption of an AI mark is
  * exempt from the try limit — see `isDone`.)
  */
+/**
+ * True once the grila is closed for good: a correct choice is already in, so
+ * re-answering proves nothing and only inflates the try history.
+ *
+ * The single exception is a past-due AI mark ("due"): there a correct answer
+ * is the redemption path, so the grila must reopen even though an older
+ * correct attempt exists.
+ */
+export function grilaLocked(
+  attempts: readonly AttemptLike[],
+  phase: AiPhase | null = null,
+): boolean {
+  if (phase === "due") return false;
+  return attempts.some((a) => a.kind === "CHOICE" && a.correct === true);
+}
+
 export function grilaCountsAsDone(
   attempts: readonly AttemptLike[],
   maxTries: number = GRILA_MAX_TRIES,
